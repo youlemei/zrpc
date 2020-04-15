@@ -1,4 +1,4 @@
-package com.lwz.protocol;
+package com.lwz.message;
 
 import lombok.Data;
 

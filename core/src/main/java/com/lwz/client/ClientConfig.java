@@ -1,5 +1,6 @@
 package com.lwz.client;
 
+import com.lwz.registry.RegistryType;
 import lombok.Data;
 
 /**
@@ -13,5 +14,10 @@ public class ClientConfig {
     private int port;
 
     private int timeout;
+
+    /**
+     * 注册中心类型
+     */
+    private RegistryType registryType = RegistryType.DEFAULT;
 
 }

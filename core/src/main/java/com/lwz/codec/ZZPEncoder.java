@@ -1,6 +1,6 @@
 package com.lwz.codec;
 
-import com.lwz.protocol.ZZPMessage;
+import com.lwz.message.ZZPMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;

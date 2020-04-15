@@ -1,10 +1,7 @@
 package com.lwz.server;
 
 import com.lwz.annotation.Handler;
-import com.lwz.annotation.Message;
 import com.lwz.annotation.Server;
-import com.lwz.codec.Messager;
-import com.lwz.protocol.ZZPHeader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
@@ -33,7 +30,7 @@ public class HandlerRegistrar implements BeanPostProcessor {
                 Handler handler = AnnotationUtils.findAnnotation(method, Handler.class);
                 if (handler != null) {
                     log.info("registry {}.{}", beanName, method.getName());
-                    registerHandler(handler, bean, method, beanName);
+                    registerHandler(server, handler, bean, method, beanName);
                 }
             }, ReflectionUtils.USER_DECLARED_METHODS);
         }
@@ -44,7 +41,7 @@ public class HandlerRegistrar implements BeanPostProcessor {
         return handlerMap.get(uri);
     }
 
-    public void registerHandler(Handler handler, Object bean, Method method, String beanName) {
+    public void registerHandler(Server server, Handler handler, Object bean, Method method, String beanName) {
         //TODO: 注册分组
         handlerMap.compute(handler.value(), (uri, invokeHandler) -> {
             if (invokeHandler != null) {
@@ -52,14 +49,7 @@ public class HandlerRegistrar implements BeanPostProcessor {
                 String second = bean.getClass().getSimpleName() + "." + method.getName();
                 throw new RuntimeException(String.format("handler repeat! they are: [%s] [%s]", first, second));
             }
-            for (Class<?> parameterType : method.getParameterTypes()) {
-                if (!parameterType.equals(ZZPHeader.class) && parameterType.getAnnotation(Message.class) != null) {
-                    //注册第一个参数
-                    Messager.registerMessage(uri, parameterType);
-                    break;
-                }
-            }
-            return new InvokeHandler(bean, method);
+            return new InvokeHandler(uri, bean, method);
         });
     }
 

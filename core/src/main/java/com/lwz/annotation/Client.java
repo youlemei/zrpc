@@ -1,5 +1,7 @@
 package com.lwz.annotation;
 
+import com.lwz.client.ClientConfig;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -13,7 +15,7 @@ import java.lang.annotation.Target;
 public @interface Client {
 
     /**
-     * 服务名, 必填
+     * 配置beanName, 必填 {@link ClientConfig}
      */
     String value();
 

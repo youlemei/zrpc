@@ -2,8 +2,10 @@ package com.lwz.client;
 
 import com.lwz.annotation.Message;
 import com.lwz.annotation.Request;
-import com.lwz.protocol.ZZPHeader;
-import com.lwz.protocol.ZZPMessage;
+import com.lwz.codec.Messager;
+import com.lwz.message.ZZPHeader;
+import com.lwz.message.ZZPMessage;
+import io.netty.buffer.ByteBuf;
 import lombok.Data;
 
 import java.lang.reflect.InvocationHandler;
@@ -58,7 +60,13 @@ public class ClientInvoker implements InvocationHandler {
                 message.setHeader(header);
                 message.setBody(req);
                 ResponseFuture responseFuture = zrpcClient.request(message);
-                return responseFuture.get();
+                ByteBuf respBuf = (ByteBuf) responseFuture.get();
+                Class<?> returnType = method.getReturnType();
+                //TODO: Future
+                if (returnType.getAnnotation(Message.class) != null) {
+                    return Messager.read(respBuf, returnType);
+                }
+                return null;
             }
         }
         return null;

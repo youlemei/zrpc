@@ -2,7 +2,7 @@ package com.lwz.client;
 
 import com.lwz.codec.ZZPDecoder;
 import com.lwz.codec.ZZPEncoder;
-import com.lwz.protocol.ZZPMessage;
+import com.lwz.message.ZZPMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -56,11 +56,13 @@ public class ZrpcClient {
             e.printStackTrace();
         }
 
+        //关闭问题->Factory
         new Thread(()->{
             try {
                 channel.channel().closeFuture().sync();
+                log.info("client close {}:{} success.", clientConfig.getHost(), clientConfig.getPort());
             } catch (Exception e) {
-                log.error("client close fail. err:{}", e.getMessage(), e);
+                log.error("client close {}:{} fail. err:{}", clientConfig.getHost(), clientConfig.getPort(), e.getMessage(), e);
             } finally {
                 codec.shutdownGracefully();
             }
@@ -76,7 +78,8 @@ public class ZrpcClient {
         return responseFuture;
     }
 
-    ResponseFutureImpl getResponseFuture(int seq) {
+    public ResponseFutureImpl getResponseFuture(int seq) {
+        //TODO: 防止OOM问题
         return responseFutureMap.remove(seq);
     }
 

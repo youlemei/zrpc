@@ -4,6 +4,7 @@ import com.lwz.annotation.ClientScan;
 import com.lwz.client.HelloClient;
 import com.lwz.client.message.HelloRequest;
 import com.lwz.client.message.HelloResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -13,6 +14,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * @author liweizhou 2020/4/13
  */
+@Slf4j
 @ClientScan("com.lwz.client")
 @SpringBootApplication
 public class Main implements ApplicationRunner {
@@ -30,5 +32,20 @@ public class Main implements ApplicationRunner {
         helloRequest.setName("lwz");
         helloRequest.setAge(123);
         HelloResponse resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
+        resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
+        resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
+        resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
+        resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
+        resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
+        resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
+        resp = helloClient.hello(helloRequest);
+        log.info("resp:{}", resp);
     }
 }

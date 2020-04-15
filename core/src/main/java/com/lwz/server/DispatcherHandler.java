@@ -1,6 +1,6 @@
 package com.lwz.server;
 
-import com.lwz.protocol.ZZPMessage;
+import com.lwz.message.ZZPMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;

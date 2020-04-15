@@ -1,7 +1,7 @@
 package com.lwz.codec;
 
-import com.lwz.protocol.ZZPHeader;
-import com.lwz.protocol.ZZPMessage;
+import com.lwz.message.ZZPHeader;
+import com.lwz.message.ZZPMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -72,12 +72,7 @@ public class ZZPDecoder extends ByteToMessageDecoder {
 
             ZZPMessage message = new ZZPMessage();
             message.setHeader(header);
-            //TODO: 不解实体,handler时再解
-            Class clz = Messager.findMessageClass(header.getUri());
-            if (clz != null) {
-                Object body = Messager.read(messageBuf, clz);
-                message.setBody(body);
-            }
+            message.setBody(messageBuf);
             out.add(message);
         }
 

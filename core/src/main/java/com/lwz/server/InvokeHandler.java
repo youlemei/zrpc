@@ -1,8 +1,11 @@
 package com.lwz.server;
 
+import com.lwz.annotation.Message;
+import com.lwz.codec.Messager;
 import com.lwz.filter.Filter;
-import com.lwz.protocol.ZZPHeader;
-import com.lwz.protocol.ZZPMessage;
+import com.lwz.message.ZZPHeader;
+import com.lwz.message.ZZPMessage;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 import java.lang.reflect.Method;
@@ -14,13 +17,16 @@ import java.util.List;
  */
 public class InvokeHandler {
 
+    private int uri;
+
     private Object bean;
 
     private Method method;
 
     private List<Filter> filters = Collections.emptyList();
 
-    public InvokeHandler(Object bean, Method method) {
+    public InvokeHandler(int uri, Object bean, Method method) {
+        this.uri = uri;
         this.bean = bean;
         this.method = method;
     }
@@ -51,6 +57,7 @@ public class InvokeHandler {
     }
 
     private Object[] getMethodArgs(ZZPMessage msg) {
+        ByteBuf bodyBuf = (ByteBuf) msg.getBody();
         Class<?>[] parameterTypes = method.getParameterTypes();
         Object[] args = new Object[parameterTypes.length];
         for (int i = 0; i < parameterTypes.length; i++) {
@@ -59,9 +66,10 @@ public class InvokeHandler {
                 args[i] = msg.getHeader();
                 continue;
             }
-            if (msg.getBody() != null && parameterType.equals(msg.getBody().getClass())) {
-                args[i] = msg.getBody();
-                continue;
+            if (parameterType.getAnnotation(Message.class) != null) {
+                Object arg = Messager.read(bodyBuf, parameterType);
+                args[i] = arg;
+                break;
             }
         }
         return args;

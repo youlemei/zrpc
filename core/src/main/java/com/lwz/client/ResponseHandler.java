@@ -1,6 +1,6 @@
 package com.lwz.client;
 
-import com.lwz.protocol.ZZPMessage;
+import com.lwz.message.ZZPMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -18,7 +18,9 @@ public class ResponseHandler extends SimpleChannelInboundHandler<ZZPMessage> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ZZPMessage msg) throws Exception {
         ResponseFutureImpl responseFuture = zrpcClient.getResponseFuture(msg.getHeader().getSeq());
-        responseFuture.complete(msg.getBody());
+        if (responseFuture != null) {
+            responseFuture.complete(msg.getBody());
+        }
     }
     
 }

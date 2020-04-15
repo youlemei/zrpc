@@ -1,7 +1,7 @@
 package com.lwz.codec;
 
 import com.lwz.annotation.Message;
-import com.lwz.protocol.ZZPHeader;
+import com.lwz.message.ZZPHeader;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.DecoderException;
@@ -234,16 +234,6 @@ public class Messager {
         if (Map.class.isAssignableFrom(clz)) {
         }
         return 0;
-    }
-
-    //弃
-    public static Class findMessageClass(int uri) {
-        return URI_CLASS_MAP.get(uri);
-    }
-
-    public static void registerMessage(Integer uri, Class parameterType) {
-        //TODO: 注册分组
-        URI_CLASS_MAP.put(uri, parameterType);
     }
 
     public static void main(String[] args) throws Exception {

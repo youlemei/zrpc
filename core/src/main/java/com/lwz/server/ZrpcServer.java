@@ -2,6 +2,7 @@ package com.lwz.server;
 
 import com.lwz.codec.ZZPDecoder;
 import com.lwz.codec.ZZPEncoder;
+import com.lwz.filter.InboundExceptionHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -17,6 +18,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 /**
  * @author liweizhou 2020/4/6
@@ -28,6 +30,12 @@ public class ZrpcServer implements ApplicationRunner {
 
     private DispatcherHandler dispatcherHandler;
 
+    private EventLoopGroup selectorGroup;
+
+    private EventLoopGroup codecGroup;
+
+    private EventExecutorGroup handlerGroup;
+
     private ChannelFuture channel;
 
     public ZrpcServer(ServerConfig serverConfig, DispatcherHandler dispatcherHandler) {
@@ -37,38 +45,40 @@ public class ZrpcServer implements ApplicationRunner {
 
     @PostConstruct
     public void init() throws Exception {
-        EventLoopGroup selector = new NioEventLoopGroup(1);
-        EventLoopGroup codec = new NioEventLoopGroup();
-        EventExecutorGroup handlerGroup = new DefaultEventExecutorGroup(NettyRuntime.availableProcessors() * 4);
+        selectorGroup = new NioEventLoopGroup(1);
+        codecGroup = new NioEventLoopGroup();
+        handlerGroup = new DefaultEventExecutorGroup(NettyRuntime.availableProcessors() * 4);
         ServerBootstrap server = new ServerBootstrap();
-        server.group(selector, codec)
+        server.group(selectorGroup, codecGroup)
                 .channel(NioServerSocketChannel.class)
                 //.childOption(ChannelOption.SO_TIMEOUT, serverConfig.getTimeout())
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
+                                //TODO: 一些常用handler
                                 .addLast("decoder", new ZZPDecoder())
                                 .addLast("encoder", new ZZPEncoder())
-                                .addLast(handlerGroup, "dispatcher", dispatcherHandler);
+                                .addLast(handlerGroup, "dispatcher", dispatcherHandler)
+                                .addLast("exception", new InboundExceptionHandler());
                     }
                 });
         channel = server.bind(serverConfig.getPort()).sync();
         log.info("zrpc server bind {} success", serverConfig.getPort());
+    }
 
-        new Thread(() -> {
-            try {
-                channel.channel().closeFuture().sync();
-                log.info("zrpc server {} close success", serverConfig.getPort());
-            } catch (Exception e) {
-                log.error("zrpc server close fail. err:{}", e.getMessage(), e);
-            } finally {
-                selector.shutdownGracefully();
-                codec.shutdownGracefully();
-                handlerGroup.shutdownGracefully();
-            }
-        }).start();
-
+    @PreDestroy
+    public void destroy(){
+        try {
+            channel.channel().close().sync();
+            log.info("zrpc server {} close success", serverConfig.getPort());
+        } catch (Exception e) {
+            log.error("zrpc server close fail. err:{}", e.getMessage(), e);
+        } finally {
+            selectorGroup.shutdownGracefully();
+            codecGroup.shutdownGracefully();
+            handlerGroup.shutdownGracefully();
+        }
     }
 
     @Override
