@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @Data
 @ConfigurationProperties("zrpc.server")
-public class ServerConfig {
+public class ServerProperties {
 
     /**
      * 服务端口

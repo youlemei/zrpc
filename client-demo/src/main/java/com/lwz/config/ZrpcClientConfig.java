@@ -1,6 +1,6 @@
 package com.lwz.config;
 
-import com.lwz.client.ClientConfig;
+import com.lwz.client.ClientProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,8 +13,8 @@ public class ZrpcClientConfig {
 
     @Bean
     @ConfigurationProperties("zrpc.client.hello")
-    public ClientConfig hello(){
-        return new ClientConfig();
+    public ClientProperties hello(){
+        return new ClientProperties();
     }
 
 }

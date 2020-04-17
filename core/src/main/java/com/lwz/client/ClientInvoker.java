@@ -19,14 +19,15 @@ public class ClientInvoker implements InvocationHandler {
 
     private Class<?> clientInterface;
 
-    private ClientConfig clientConfig;
+    private ClientProperties clientConfig;
 
     private ZrpcClient zrpcClient;
 
-    public ClientInvoker(Class<?> clientInterface, ClientConfig clientConfig) {
+    public ClientInvoker(Class<?> clientInterface, ClientProperties clientConfig) {
         this.clientInterface = clientInterface;
         this.clientConfig = clientConfig;
         //TODO: 池化
+        //TODO: shudownhook
         this.zrpcClient = new ZrpcClient(clientConfig);
     }
 

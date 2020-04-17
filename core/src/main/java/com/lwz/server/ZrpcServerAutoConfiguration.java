@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Import;
  */
 @Import(HandlerRegistrar.class)
 @ConditionalOnProperty(value = "zrpc.server.enabled")
-@EnableConfigurationProperties(ServerConfig.class)
+@EnableConfigurationProperties(ServerProperties.class)
 public class ZrpcServerAutoConfiguration {
 
     @Bean
@@ -19,7 +19,7 @@ public class ZrpcServerAutoConfiguration {
     }
 
     @Bean
-    public ZrpcServer zrpcServer(ServerConfig serverConfig, DispatcherHandler dispatcherHandler){
+    public ZrpcServer zrpcServer(ServerProperties serverConfig, DispatcherHandler dispatcherHandler){
         return new ZrpcServer(serverConfig, dispatcherHandler);
     }
 

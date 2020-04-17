@@ -26,7 +26,7 @@ import javax.annotation.PreDestroy;
 @Slf4j
 public class ZrpcServer implements ApplicationRunner {
 
-    private ServerConfig serverConfig;
+    private ServerProperties serverConfig;
 
     private DispatcherHandler dispatcherHandler;
 
@@ -38,7 +38,7 @@ public class ZrpcServer implements ApplicationRunner {
 
     private ChannelFuture channel;
 
-    public ZrpcServer(ServerConfig serverConfig, DispatcherHandler dispatcherHandler) {
+    public ZrpcServer(ServerProperties serverConfig, DispatcherHandler dispatcherHandler) {
         this.serverConfig = serverConfig;
         this.dispatcherHandler = dispatcherHandler;
     }

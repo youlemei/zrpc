@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class ZrpcClient {
 
-    private ClientConfig clientConfig;
+    private ClientProperties clientConfig;
 
     private ChannelFuture channel;
 
@@ -29,7 +29,7 @@ public class ZrpcClient {
 
     private ConcurrentMap<Integer, ResponseFutureImpl> responseFutureMap = new ConcurrentHashMap<>();
 
-    public ZrpcClient(ClientConfig clientConfig) {
+    public ZrpcClient(ClientProperties clientConfig) {
         this.clientConfig = clientConfig;
         init();
     }

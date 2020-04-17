@@ -20,7 +20,7 @@ public class ClientFactoryBean implements FactoryBean, BeanFactoryAware {
     @Override
     public Object getObject() throws Exception {
         Client client = clientInterface.getAnnotation(Client.class);
-        ClientConfig clientConfig = beanFactory.getBean(client.value(), ClientConfig.class);
+        ClientProperties clientConfig = beanFactory.getBean(client.value(), ClientProperties.class);
         ClientInvoker clientInvoker = new ClientInvoker(clientInterface, clientConfig);
         return Proxy.newProxyInstance(clientInterface.getClassLoader(), new Class[]{clientInterface}, clientInvoker);
     }

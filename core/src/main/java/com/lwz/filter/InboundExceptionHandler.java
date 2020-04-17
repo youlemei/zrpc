@@ -13,6 +13,6 @@ public class InboundExceptionHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         //TODO: 异常处理
-        log.error("err: {}", cause.getMessage());
+        log.error("err:{} type:{}", cause.getMessage(), cause.getClass().getName());
     }
 }
