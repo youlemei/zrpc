@@ -19,10 +19,6 @@ public class ZZPDecoder extends ByteToMessageDecoder {
 
     public static final int MAX_MESSAGE_LENGTH = 10 * 1024 * 1024;
 
-    public static final short PING = 1;
-
-    public static final short PONG = 2;
-
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         //byteBuf -> zzpMessage
@@ -63,7 +59,7 @@ public class ZZPDecoder extends ByteToMessageDecoder {
             messageBuf.readerIndex(ZZPHeader.HEADER_LENGTH);
 
             if (isPing(header.getExt())) {
-                header.setExt(PONG);
+                header.setExt(ZZPHeader.PONG);
                 ZZPMessage message = new ZZPMessage();
                 message.setHeader(header);
                 ctx.channel().writeAndFlush(message);
@@ -79,11 +75,11 @@ public class ZZPDecoder extends ByteToMessageDecoder {
     }
 
     private boolean isPing(short ext) {
-        return (ext & PING) > 0;
+        return (ext & ZZPHeader.PING) > 0;
     }
 
     private boolean isPong(short ext) {
-        return (ext & PONG) > 0;
+        return (ext & ZZPHeader.PONG) > 0;
     }
 
     //TODO: 解包异常响应

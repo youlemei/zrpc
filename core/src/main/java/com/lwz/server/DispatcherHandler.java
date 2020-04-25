@@ -19,7 +19,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ZZPMessage msg) throws Exception {
-        InvokeHandler handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
+        HandlerInvoker handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
         if (handler == null) {
             //err404
 

@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentMap;
 @Slf4j
 public class HandlerRegistrar implements BeanPostProcessor {
 
-    private final ConcurrentMap<Integer, InvokeHandler> handlerMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Integer, HandlerInvoker> handlerMap = new ConcurrentHashMap<>();
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -37,19 +37,19 @@ public class HandlerRegistrar implements BeanPostProcessor {
         return bean;
     }
 
-    public InvokeHandler findHandler(int uri) {
+    public HandlerInvoker findHandler(int uri) {
         return handlerMap.get(uri);
     }
 
     public void registerHandler(Server server, Handler handler, Object bean, Method method, String beanName) {
         //TODO: 注册分组
-        handlerMap.compute(handler.value(), (uri, invokeHandler) -> {
-            if (invokeHandler != null) {
-                String first = invokeHandler.getBean().getClass().getSimpleName() + "." + invokeHandler.getMethod().getName();
+        handlerMap.compute(handler.value(), (uri, handlerInvoker) -> {
+            if (handlerInvoker != null) {
+                String first = handlerInvoker.getBean().getClass().getSimpleName() + "." + handlerInvoker.getMethod().getName();
                 String second = bean.getClass().getSimpleName() + "." + method.getName();
                 throw new RuntimeException(String.format("handler repeat! they are: [%s] [%s]", first, second));
             }
-            return new InvokeHandler(uri, bean, method);
+            return new HandlerInvoker(uri, bean, method);
         });
     }
 

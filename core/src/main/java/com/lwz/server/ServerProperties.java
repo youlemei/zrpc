@@ -1,6 +1,6 @@
 package com.lwz.server;
 
-import com.lwz.registry.RegistryType;
+import com.lwz.registry.RegistryProperties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -21,19 +21,6 @@ public class ServerProperties {
      */
     private int timeout;
 
-    /**
-     * 服务名, 必填
-     */
-    private String serverName;
-
-    /**
-     * 服务密钥, 注册使用
-     */
-    private String serverKey;
-
-    /**
-     * 注册中心类型
-     */
-    private RegistryType registryType = RegistryType.DEFAULT;
+    private RegistryProperties registry;
 
 }

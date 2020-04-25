@@ -1,5 +1,8 @@
 package com.lwz.client;
 
+import com.lwz.codec.Messager;
+import io.netty.buffer.ByteBuf;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -23,11 +26,17 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
 
     private List<Thread> interruptThreads;
 
+    private Class<T> returnType;
+
     enum Status {
         RUN, DONE, CANCEL
     }
 
     public ResponseFutureImpl() {
+    }
+
+    public ResponseFutureImpl(Class<T> returnType) {
+        this.returnType = returnType;
     }
 
     @Override
@@ -123,11 +132,22 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
             if (this.status == Status.RUN) {
                 this.status = Status.DONE;
             }
-            this.data = data;
+            readResp(data);
             lock.notifyAll();
             //onSuccess
             //onFail
         }
+    }
+
+    private void readResp(T data) {
+        if (returnType == null) {
+            return;
+        }
+        if (void.class.equals(returnType)) {
+            return;
+        }
+        ByteBuf byteBuf = (ByteBuf) data;
+        this.data = Messager.read(byteBuf, returnType);
     }
 
     //TODO: how to do ?

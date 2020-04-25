@@ -43,7 +43,7 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar {
                 log.info("registry {}", clientInterface.getName());
                 registry.registerBeanDefinition(StringUtils.uncapitalize(clientInterface.getSimpleName()), beanDefinition);
             } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                //ignore
             }
         }
 

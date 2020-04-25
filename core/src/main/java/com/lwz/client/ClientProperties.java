@@ -1,7 +1,10 @@
 package com.lwz.client;
 
-import com.lwz.registry.RegistryType;
+import com.lwz.registry.RegistryProperties;
 import lombok.Data;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+
+import java.util.List;
 
 /**
  * @author liweizhou 2020/4/12
@@ -9,15 +12,12 @@ import lombok.Data;
 @Data
 public class ClientProperties {
 
-    private String host;
-
-    private int port;
+    private List<String> nodes;
 
     private int timeout;
 
-    /**
-     * 注册中心类型
-     */
-    private RegistryType registryType = RegistryType.DEFAULT;
+    private RegistryProperties registry;
+
+    private GenericObjectPoolConfig<ZrpcClient> pool;
 
 }

@@ -1,40 +1,72 @@
 package com.lwz.client.pool;
 
+import com.lwz.client.ClientProperties;
 import com.lwz.client.ZrpcClient;
+import com.lwz.registry.DirectRegistrar;
+import com.lwz.registry.Registrar;
+import com.lwz.registry.ServerInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
+import org.apache.commons.pool2.impl.DefaultPooledObject;
+
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author liweizhou 2020/4/17
  */
+@Slf4j
 public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
-    //观察者
+    private ClientProperties clientProperties;
+
+    private Registrar registrar;
+
+    public ClientFactory(ClientProperties clientProperties) {
+        this.clientProperties = clientProperties;
+        if (clientProperties.getRegistry() == null) {
+            registrar = new DirectRegistrar(clientProperties.getNodes());
+        }
+    }
 
     @Override
     public PooledObject<ZrpcClient> makeObject() throws Exception {
-        //拿到host/port后,创建channel
-
-        return null;
+        //TODO: 熔断
+        List<ServerInfo> serverInfos = registrar.getServerInfos();
+        ServerInfo serverInfo = serverInfos.get(ThreadLocalRandom.current().nextInt(serverInfos.size()));
+        ZrpcClient zrpcClient = new ZrpcClient(serverInfo, clientProperties.getTimeout());
+        return new DefaultPooledObject<>(zrpcClient);
     }
 
     @Override
     public void destroyObject(PooledObject<ZrpcClient> p) throws Exception {
-
+        ZrpcClient zrpcClient = p.getObject();
+        if (zrpcClient != null) {
+            zrpcClient.close();
+        }
     }
 
     @Override
     public boolean validateObject(PooledObject<ZrpcClient> p) {
-        return false;
+        ZrpcClient zrpcClient = p.getObject();
+        if (zrpcClient == null) {
+            return false;
+        }
+        try {
+            zrpcClient.ping();
+            return true;
+        } catch (Exception e) {
+            log.warn("ping fail. {} err:{}", zrpcClient.getServerInfo(), e.getMessage(), e);
+            return false;
+        }
     }
 
     @Override
     public void activateObject(PooledObject<ZrpcClient> p) throws Exception {
-
     }
 
     @Override
     public void passivateObject(PooledObject<ZrpcClient> p) throws Exception {
-
     }
 }

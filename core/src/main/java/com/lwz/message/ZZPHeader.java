@@ -44,4 +44,8 @@ public class ZZPHeader {
 
     public static final int HEADER_LENGTH = 16;
 
+    public static final short PING = 1;
+
+    public static final short PONG = 2;
+
 }

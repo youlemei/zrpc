@@ -10,6 +10,9 @@ public class ZZPMessage {
 
     private ZZPHeader header;
 
+    /**
+     * TODO: REQ/RESP 目前是ByteBuf/Message
+     */
     private Object body;
 
 }

@@ -1,16 +1,14 @@
 package com.lwz.registry;
 
+import java.util.List;
+
 /**
  * @author liweizhou 2020/4/17
  */
 public class ZooKeeperRegistrar implements Registrar {
 
-    //观察者注册
-
-    //观察者事件通知
-
     @Override
-    public ServerInfoObserver addObserver() {
+    public List<ServerInfo> getServerInfos() {
         return null;
     }
 

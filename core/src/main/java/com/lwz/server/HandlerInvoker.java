@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * @author liweizhou 2020/4/5
  */
-public class InvokeHandler {
+public class HandlerInvoker {
 
     private int uri;
 
@@ -25,7 +25,7 @@ public class InvokeHandler {
 
     private List<Filter> filters = Collections.emptyList();
 
-    public InvokeHandler(int uri, Object bean, Method method) {
+    public HandlerInvoker(int uri, Object bean, Method method) {
         this.uri = uri;
         this.bean = bean;
         this.method = method;

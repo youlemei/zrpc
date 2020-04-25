@@ -5,6 +5,6 @@ package com.lwz.registry;
  */
 public enum RegistryType {
 
-    DEFAULT, DIRECT, CENTER
+    ZOOKEEPER
 
 }
