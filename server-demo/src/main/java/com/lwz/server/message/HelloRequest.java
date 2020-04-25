@@ -12,9 +12,9 @@ import lombok.Data;
 public class HelloRequest {
 
     @Field(1)
-    private String name;
+    private String host;
 
     @Field(2)
-    private int age;
+    private int port;
 
 }

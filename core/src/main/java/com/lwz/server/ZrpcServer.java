@@ -3,6 +3,9 @@ package com.lwz.server;
 import com.lwz.codec.ZZPDecoder;
 import com.lwz.codec.ZZPEncoder;
 import com.lwz.filter.InboundExceptionHandler;
+import com.lwz.registry.Registrar;
+import com.lwz.registry.RegistryType;
+import com.lwz.registry.ZooKeeperRegistrar;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -26,7 +29,7 @@ import javax.annotation.PreDestroy;
 @Slf4j
 public class ZrpcServer implements ApplicationRunner {
 
-    private ServerProperties serverConfig;
+    private ServerProperties serverProperties;
 
     private DispatcherHandler dispatcherHandler;
 
@@ -38,8 +41,8 @@ public class ZrpcServer implements ApplicationRunner {
 
     private ChannelFuture channel;
 
-    public ZrpcServer(ServerProperties serverConfig, DispatcherHandler dispatcherHandler) {
-        this.serverConfig = serverConfig;
+    public ZrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler) {
+        this.serverProperties = serverProperties;
         this.dispatcherHandler = dispatcherHandler;
     }
 
@@ -63,15 +66,15 @@ public class ZrpcServer implements ApplicationRunner {
                                 .addLast("exception", new InboundExceptionHandler());
                     }
                 });
-        channel = server.bind(serverConfig.getPort()).sync();
-        log.info("zrpc server bind {} success", serverConfig.getPort());
+        channel = server.bind(serverProperties.getPort()).sync();
+        log.info("zrpc server bind {} success", serverProperties.getPort());
     }
 
     @PreDestroy
     public void destroy(){
         try {
             channel.channel().close().sync();
-            log.info("zrpc server {} close success", serverConfig.getPort());
+            log.info("zrpc server {} close success", serverProperties.getPort());
         } catch (Exception e) {
             log.error("zrpc server close fail. err:{}", e.getMessage(), e);
         } finally {
@@ -83,6 +86,12 @@ public class ZrpcServer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        if (serverProperties.getRegistry() != null) {
+            if (RegistryType.ZOOKEEPER == serverProperties.getRegistry().getRegistryType()) {
+                Registrar registrar = new ZooKeeperRegistrar(serverProperties.getRegistry());
+                registrar.signIn();
+            }
+        }
         //TODO: 注册
     }
 

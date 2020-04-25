@@ -26,13 +26,7 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar {
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
         Map<String, Object> clientScan = importingClassMetadata.getAnnotationAttributes(ClientScan.class.getName());
         String clientPackage = clientScan.get("value").toString();
-        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false){
-            @Override
-            protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition)  {
-                return beanDefinition.getMetadata().isInterface();
-            }
-        };
-        scanner.addIncludeFilter(new AnnotationTypeFilter(Client.class));
+        ClientScanner scanner = new ClientScanner();
         Set<BeanDefinition> clientDefinitionSet = scanner.findCandidateComponents(clientPackage);
         for (BeanDefinition clientDefinition : clientDefinitionSet) {
             try {
@@ -46,6 +40,16 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar {
                 //ignore
             }
         }
+    }
 
+    class ClientScanner extends ClassPathScanningCandidateComponentProvider {
+        public ClientScanner() {
+            super(false);
+            this.addIncludeFilter(new AnnotationTypeFilter(Client.class));
+        }
+        @Override
+        protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
+            return beanDefinition.getMetadata().isInterface();
+        }
     }
 }

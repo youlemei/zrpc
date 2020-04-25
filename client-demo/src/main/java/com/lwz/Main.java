@@ -30,31 +30,33 @@ public class Main implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+
         HelloRequest helloRequest = new HelloRequest();
-        helloRequest.setName("lwz");
-        helloRequest.setAge(123);
-        HelloResponse resp = helloClient.hello(helloRequest);
-        log.info("resp:{}", resp);
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
-        log.info("resp:{}", helloClient.hello(helloRequest));
+        helloRequest.setHost("lwz");
+        helloRequest.setPort(7320);
 
-        Future<HelloResponse> helloResponseFuture1 = helloClient.helloAsync(helloRequest);
-        Future<HelloResponse> helloResponseFuture2 = helloClient.helloAsync(helloRequest);
-        Future<HelloResponse> helloResponseFuture3 = helloClient.helloAsync(helloRequest);
-        Future<HelloResponse> helloResponseFuture4 = helloClient.helloAsync(helloRequest);
-        Future<HelloResponse> helloResponseFuture5 = helloClient.helloAsync(helloRequest);
+        HelloResponse resp1 = helloClient.hello(helloRequest);
+        HelloResponse resp2 = helloClient.hello(helloRequest);
+        HelloResponse resp3 = helloClient.hello(helloRequest);
+        HelloResponse resp4 = helloClient.hello(helloRequest);
+        HelloResponse resp5 = helloClient.hello(helloRequest);
 
-        log.info("resp:{}", helloResponseFuture1.get());
-        log.info("resp:{}", helloResponseFuture2.get());
-        log.info("resp:{}", helloResponseFuture3.get());
-        log.info("resp:{}", helloResponseFuture4.get());
-        log.info("resp:{}", helloResponseFuture5.get());
+        log.info("resp:{}", resp1);
+        log.info("resp:{}", resp2);
+        log.info("resp:{}", resp3);
+        log.info("resp:{}", resp4);
+        log.info("resp:{}", resp5);
+
+        Future<HelloResponse> future1 = helloClient.helloAsync(helloRequest);
+        Future<HelloResponse> future2 = helloClient.helloAsync(helloRequest);
+        Future<HelloResponse> future3 = helloClient.helloAsync(helloRequest);
+        Future<HelloResponse> future4 = helloClient.helloAsync(helloRequest);
+        Future<HelloResponse> future5 = helloClient.helloAsync(helloRequest);
+
+        log.info("resp:{}", future1.get());
+        log.info("resp:{}", future2.get());
+        log.info("resp:{}", future3.get());
+        log.info("resp:{}", future4.get());
+        log.info("resp:{}", future5.get());
     }
 }

@@ -19,8 +19,8 @@ public class ZrpcServerAutoConfiguration {
     }
 
     @Bean
-    public ZrpcServer zrpcServer(ServerProperties serverConfig, DispatcherHandler dispatcherHandler){
-        return new ZrpcServer(serverConfig, dispatcherHandler);
+    public ZrpcServer zrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler){
+        return new ZrpcServer(serverProperties, dispatcherHandler);
     }
 
 }

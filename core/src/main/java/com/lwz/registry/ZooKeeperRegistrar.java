@@ -7,6 +7,10 @@ import java.util.List;
  */
 public class ZooKeeperRegistrar implements Registrar {
 
+    public ZooKeeperRegistrar(RegistryProperties registryProperties) {
+
+    }
+
     @Override
     public List<ServerInfo> getServerInfos() {
         return null;
