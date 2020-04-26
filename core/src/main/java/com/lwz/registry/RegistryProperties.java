@@ -27,4 +27,6 @@ public class RegistryProperties {
      */
     private RegistryType registryType = RegistryType.ZOOKEEPER;
 
+    private String rootPath = "/server";
+
 }

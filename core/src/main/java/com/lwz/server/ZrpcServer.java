@@ -41,6 +41,8 @@ public class ZrpcServer implements ApplicationRunner {
 
     private ChannelFuture channel;
 
+    private Registrar registrar;
+
     public ZrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler) {
         this.serverProperties = serverProperties;
         this.dispatcherHandler = dispatcherHandler;
@@ -75,6 +77,9 @@ public class ZrpcServer implements ApplicationRunner {
         try {
             channel.channel().close().sync();
             log.info("zrpc server {} close success", serverProperties.getPort());
+            if (registrar != null) {
+                registrar.signOut();
+            }
         } catch (Exception e) {
             log.error("zrpc server close fail. err:{}", e.getMessage(), e);
         } finally {
@@ -88,11 +93,10 @@ public class ZrpcServer implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         if (serverProperties.getRegistry() != null) {
             if (RegistryType.ZOOKEEPER == serverProperties.getRegistry().getRegistryType()) {
-                Registrar registrar = new ZooKeeperRegistrar(serverProperties.getRegistry());
+                registrar = new ZooKeeperRegistrar(serverProperties.getRegistry());
                 registrar.signIn();
             }
         }
-        //TODO: 注册
     }
 
 }

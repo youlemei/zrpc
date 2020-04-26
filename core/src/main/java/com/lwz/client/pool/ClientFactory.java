@@ -2,9 +2,7 @@ package com.lwz.client.pool;
 
 import com.lwz.client.ClientProperties;
 import com.lwz.client.ZrpcClient;
-import com.lwz.registry.DirectRegistrar;
-import com.lwz.registry.Registrar;
-import com.lwz.registry.ServerInfo;
+import com.lwz.registry.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
@@ -27,6 +25,10 @@ public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
         this.clientProperties = clientProperties;
         if (clientProperties.getRegistry() == null) {
             registrar = new DirectRegistrar(clientProperties.getNodes());
+        } else {
+            if (RegistryType.ZOOKEEPER == clientProperties.getRegistry().getRegistryType()) {
+                registrar = new ZooKeeperRegistrar(clientProperties.getRegistry());
+            }
         }
     }
 

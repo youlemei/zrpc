@@ -13,6 +13,4 @@ public interface Registrar {
 
     default void signOut(){}
 
-    default void ping(){}
-
 }
