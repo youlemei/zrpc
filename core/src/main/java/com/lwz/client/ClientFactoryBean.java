@@ -27,6 +27,7 @@ public class ClientFactoryBean implements FactoryBean, BeanFactoryAware {
     public Object getObject() throws Exception {
         Client client = clientInterface.getAnnotation(Client.class);
         ClientProperties clientProperties = beanFactory.getBean(client.value(), ClientProperties.class);
+        //一个服务器一个连接池, 再包装一层, 方便进行负载均衡/熔断降级
         this.clientPool = new ClientPool(clientProperties);
         RequestInvoker requestInvoker = new RequestInvoker(clientInterface, clientPool);
         return Proxy.newProxyInstance(clientInterface.getClassLoader(), new Class[]{clientInterface}, requestInvoker);

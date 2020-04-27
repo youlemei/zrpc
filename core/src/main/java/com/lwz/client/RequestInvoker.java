@@ -94,6 +94,7 @@ public class RequestInvoker implements InvocationHandler {
         if (Future.class.isAssignableFrom(returnType)) {
             return responseFuture;
         }
+        //TODO: 默认超时设置 结合熔断
         return responseFuture.get();
     }
 

@@ -37,7 +37,7 @@ public class ZZPHeader {
     private short version = Messager.VERSION;
 
     /**
-     * 拓展: ping/pong/exception
+     * 拓展: ping/pong/exception/json
      */
     @Field(5)
     private short ext;
@@ -47,5 +47,9 @@ public class ZZPHeader {
     public static final short PING = 1;
 
     public static final short PONG = 2;
+
+    public static final short EXCEPTION = 4;
+
+    public static final short JSON = 8;
 
 }

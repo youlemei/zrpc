@@ -5,7 +5,9 @@ import com.lwz.codec.ZZPEncoder;
 import com.lwz.filter.InboundExceptionHandler;
 import com.lwz.registry.Registrar;
 import com.lwz.registry.RegistryType;
+import com.lwz.registry.ServerInfo;
 import com.lwz.registry.ZooKeeperRegistrar;
+import com.lwz.util.IPUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -93,7 +95,8 @@ public class ZrpcServer implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         if (serverProperties.getRegistry() != null) {
             if (RegistryType.ZOOKEEPER == serverProperties.getRegistry().getRegistryType()) {
-                registrar = new ZooKeeperRegistrar(serverProperties.getRegistry());
+                ServerInfo serverInfo = new ServerInfo(IPUtils.getIp(), serverProperties.getPort());
+                registrar = new ZooKeeperRegistrar(serverProperties.getRegistry(), serverInfo);
                 registrar.signIn();
             }
         }

@@ -19,6 +19,7 @@ public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
     private ClientProperties clientProperties;
 
+    //TODO: 提到上一层
     private Registrar registrar;
 
     public ClientFactory(ClientProperties clientProperties) {
@@ -34,7 +35,7 @@ public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
     @Override
     public PooledObject<ZrpcClient> makeObject() throws Exception {
-        //TODO: 熔断
+        //no available server
         List<ServerInfo> serverInfos = registrar.getServerInfos();
         ServerInfo serverInfo = serverInfos.get(ThreadLocalRandom.current().nextInt(serverInfos.size()));
         ZrpcClient zrpcClient = new ZrpcClient(serverInfo, clientProperties.getTimeout());
