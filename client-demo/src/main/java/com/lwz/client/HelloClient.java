@@ -19,4 +19,7 @@ public interface HelloClient {
     @Request(1)
     Future<HelloResponse> helloAsync(HelloRequest helloRequest);
 
+    @Request(1)
+    void helloOnly(HelloRequest helloRequest);
+
 }

@@ -15,9 +15,4 @@ import java.lang.annotation.Target;
 @Component
 public @interface Server {
 
-    ///**
-    // * 配置BeanName, 必填, {@link ServerConfig}
-    // */
-    //String value() default "";
-
 }

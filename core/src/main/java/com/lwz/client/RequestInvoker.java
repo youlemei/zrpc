@@ -2,7 +2,7 @@ package com.lwz.client;
 
 import com.lwz.annotation.Message;
 import com.lwz.annotation.Request;
-import com.lwz.client.pool.ClientPool;
+import com.lwz.client.pool.ClientManager;
 import com.lwz.message.ZZPHeader;
 import com.lwz.message.ZZPMessage;
 import lombok.Data;
@@ -22,12 +22,12 @@ import java.util.concurrent.Future;
 @Data
 public class RequestInvoker implements InvocationHandler {
 
-    private ClientPool clientPool;
+    private ClientManager clientManager;
 
     private ConcurrentMap<Method, MethodMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    public RequestInvoker(Class<?> clientInterface, ClientPool clientPool) {
-        this.clientPool = clientPool;
+    public RequestInvoker(Class<?> clientInterface, ClientManager clientManager) {
+        this.clientManager = clientManager;
         init(clientInterface);
     }
 
@@ -73,6 +73,7 @@ public class RequestInvoker implements InvocationHandler {
         Class<?> actualType = returnType;
         if (Future.class.isAssignableFrom(returnType)) {
             ParameterizedType genericReturnType = (ParameterizedType) method.getGenericReturnType();
+            //genericReturnType.getRawType() is Future.class
             actualType = (Class<?>) genericReturnType.getActualTypeArguments()[0];
         }
         try {
@@ -83,10 +84,10 @@ public class RequestInvoker implements InvocationHandler {
             if (methodMetadata.getArgsIndex() >= 0) {
                 message.setBody(args[methodMetadata.getArgsIndex()]);
             }
-            zrpcClient = clientPool.borrowObject();
+            zrpcClient = clientManager.borrowObject();
             responseFuture = zrpcClient.request(message, actualType);
         } finally {
-            clientPool.returnObject(zrpcClient);
+            clientManager.returnObject(zrpcClient);
         }
         if (returnType.equals(void.class)) {
             return null;

@@ -42,7 +42,6 @@ public class HandlerRegistrar implements BeanPostProcessor {
     }
 
     public void registerHandler(Server server, Handler handler, Object bean, Method method, String beanName) {
-        //TODO: 注册分组
         handlerMap.compute(handler.value(), (uri, handlerInvoker) -> {
             if (handlerInvoker != null) {
                 String first = handlerInvoker.getBean().getClass().getSimpleName() + "." + handlerInvoker.getMethod().getName();

@@ -1,9 +1,7 @@
 package com.lwz.codec;
 
 import com.lwz.annotation.Message;
-import com.lwz.message.ZZPHeader;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import org.springframework.util.Assert;
@@ -27,6 +25,15 @@ public class Messager {
 
     public static final ConcurrentMap<Integer, Class> URI_CLASS_MAP = new ConcurrentHashMap<>();
 
+    /**
+     * 解包
+     * TODO: Type
+     *
+     * @param byteBuf
+     * @param clz
+     * @param <T>
+     * @return
+     */
     public static <T> T read(ByteBuf byteBuf, Class<T> clz) {
         if (clz == null) {
             return null;
@@ -100,6 +107,13 @@ public class Messager {
         return null;
     }
 
+    /**
+     * 打包
+     * TODO: Type
+     *
+     * @param byteBuf
+     * @param data
+     */
     public static void write(ByteBuf byteBuf, Object data) {
         if (data == null) {
             return;
@@ -235,25 +249,6 @@ public class Messager {
         }
         return 0;
     }
-
-    public static void main(String[] args) throws Exception {
-
-        ZZPHeader zzpHeader = new ZZPHeader();
-        zzpHeader.setUri(5);
-        zzpHeader.setSeq(4);
-        zzpHeader.setLength(3);
-        zzpHeader.setVersion((short)4);
-        zzpHeader.setExt((short)5);
-
-        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
-        write(byteBuf, zzpHeader);
-
-        ZZPHeader header = read(byteBuf, ZZPHeader.class);
-
-        System.out.println(header);
-
-    }
-
 
 }
 

@@ -1,15 +1,11 @@
 package com.lwz.client.pool;
 
-import com.lwz.client.ClientProperties;
 import com.lwz.client.ZrpcClient;
-import com.lwz.registry.*;
+import com.lwz.registry.ServerInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
-
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author liweizhou 2020/4/17
@@ -17,28 +13,18 @@ import java.util.concurrent.ThreadLocalRandom;
 @Slf4j
 public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
-    private ClientProperties clientProperties;
+    private ServerInfo serverInfo;
 
-    //TODO: 提到上一层
-    private Registrar registrar;
+    private int timeout;
 
-    public ClientFactory(ClientProperties clientProperties) {
-        this.clientProperties = clientProperties;
-        if (clientProperties.getRegistry() == null) {
-            registrar = new DirectRegistrar(clientProperties.getNodes());
-        } else {
-            if (RegistryType.ZOOKEEPER == clientProperties.getRegistry().getRegistryType()) {
-                registrar = new ZooKeeperRegistrar(clientProperties.getRegistry());
-            }
-        }
+    public ClientFactory(ServerInfo serverInfo, int timeout) {
+        this.serverInfo = serverInfo;
+        this.timeout = timeout;
     }
 
     @Override
     public PooledObject<ZrpcClient> makeObject() throws Exception {
-        //no available server
-        List<ServerInfo> serverInfos = registrar.getServerInfos();
-        ServerInfo serverInfo = serverInfos.get(ThreadLocalRandom.current().nextInt(serverInfos.size()));
-        ZrpcClient zrpcClient = new ZrpcClient(serverInfo, clientProperties.getTimeout());
+        ZrpcClient zrpcClient = new ZrpcClient(serverInfo, timeout);
         return new DefaultPooledObject<>(zrpcClient);
     }
 

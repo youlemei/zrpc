@@ -65,7 +65,9 @@ public class ZrpcClient implements Closeable {
     @Override
     public void close() {
         try {
+            //等待回应超时?
             channel.channel().close().sync();
+            responseFutureMap.clear();
             log.info("client close {}:{} success.", serverInfo.getHost(), serverInfo.getPort());
         } catch (Exception e) {
             log.warn("client close {}:{} fail. err:{}", serverInfo.getHost(), serverInfo.getPort(), e.getMessage(), e);

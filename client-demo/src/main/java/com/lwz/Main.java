@@ -58,5 +58,13 @@ public class Main implements ApplicationRunner {
         log.info("resp:{}", future3.get());
         log.info("resp:{}", future4.get());
         log.info("resp:{}", future5.get());
+
+        helloClient.helloOnly(helloRequest);
+        helloClient.helloOnly(helloRequest);
+        helloClient.helloOnly(helloRequest);
+        helloClient.helloOnly(helloRequest);
+        helloClient.helloOnly(helloRequest);
+
+        log.info("hello end.");
     }
 }

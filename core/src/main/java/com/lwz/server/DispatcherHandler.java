@@ -4,10 +4,12 @@ import com.lwz.message.ZZPMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author liweizhou 2020/4/5
  */
+@Slf4j
 @ChannelHandler.Sharable
 public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
 
@@ -24,6 +26,8 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
             //err404
 
         }
+
+        //TODO: 调用链 ThreadLocal
 
         try {
             if (!handler.applyPreHandle(ctx, msg)) {
@@ -44,6 +48,10 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
 
     }
 
-    //TODO: 处理异常响应
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        //TODO: 异常处理
+        log.error("err:{} type:{}", cause.getMessage(), cause.getClass().getName());
+    }
 
 }

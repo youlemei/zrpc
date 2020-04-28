@@ -2,6 +2,9 @@ package com.lwz.client;
 
 import com.lwz.codec.Messager;
 import io.netty.buffer.ByteBuf;
+import org.springframework.util.concurrent.FailureCallback;
+import org.springframework.util.concurrent.ListenableFutureCallbackRegistry;
+import org.springframework.util.concurrent.SuccessCallback;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -9,7 +12,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 
 /**
  * @author liweizhou 2020/3/29
@@ -46,6 +48,9 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
         }
         if (status == Status.RUN) {
             synchronized (lock) {
+                if (status == Status.DONE) {
+                    return false;
+                }
                 if (status == Status.RUN) {
                     status = Status.CANCEL;
                     if (mayInterruptIfRunning && interruptThreads != null) {
@@ -74,20 +79,26 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
         if (status == Status.DONE) {
             return data;
         }
+        checkCancel();
         synchronized (lock) {
             if (status == Status.DONE) {
                 return data;
             }
-            if (status == Status.CANCEL) {
-                throw new CancellationException("ResponseFuture is cancelled.");
-            }
+            checkCancel();
             addInterruptThread();
             lock.wait();
             removeInterruptThread();
+            checkCancel();
             if (e != null) {
                 throw e;
             }
             return data;
+        }
+    }
+
+    private void checkCancel() {
+        if (status == Status.CANCEL) {
+            throw new CancellationException("ResponseFuture is cancelled.");
         }
     }
 
@@ -96,16 +107,16 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
         if (status == Status.DONE) {
             return data;
         }
+        checkCancel();
         synchronized (lock) {
             if (status == Status.DONE) {
                 return data;
             }
-            if (status == Status.CANCEL) {
-                throw new CancellationException("ResponseFuture is cancelled.");
-            }
+            checkCancel();
             addInterruptThread();
             lock.wait(unit.toMillis(timeout));
             removeInterruptThread();
+            checkCancel();
             if (e != null) {
                 throw e;
             }
@@ -127,13 +138,15 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
         interruptThreads.remove(Thread.currentThread());
     }
 
+    //TODO: 超时问题, 容易无限等待
     public void complete(T data) {
         synchronized (lock) {
+            readResp(data);
             if (this.status == Status.RUN) {
                 this.status = Status.DONE;
             }
-            readResp(data);
             lock.notifyAll();
+            futureCallbackRegistry.success(this.data);
             //onSuccess
             //onFail
         }
@@ -150,14 +163,17 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
         this.data = Messager.read(byteBuf, returnType);
     }
 
-    //TODO: how to do ?
+    private ListenableFutureCallbackRegistry futureCallbackRegistry = new ListenableFutureCallbackRegistry();
+
     @Override
-    public ResponseFuture<T> onSuccess(Consumer<T> success) {
+    public ResponseFuture<T> onSuccess(SuccessCallback<T> success) {
+        futureCallbackRegistry.addSuccessCallback(success);
         return this;
     }
 
     @Override
-    public ResponseFuture<T> onFail(Consumer<T> fail) {
+    public ResponseFuture<T> onFail(FailureCallback fail) {
+        futureCallbackRegistry.addFailureCallback(fail);
         return this;
     }
 }

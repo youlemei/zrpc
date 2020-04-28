@@ -6,6 +6,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * @author liweizhou 2020/4/17
@@ -25,7 +26,7 @@ public class DirectRegistrar implements Registrar {
     }
 
     @Override
-    public List<ServerInfo> getServerInfos() {
-        return serverInfos;
+    public void setListener(Consumer<List<ServerInfo>> listener) {
+        listener.accept(serverInfos);
     }
 }

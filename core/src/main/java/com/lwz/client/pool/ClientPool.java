@@ -2,6 +2,7 @@ package com.lwz.client.pool;
 
 import com.lwz.client.ClientProperties;
 import com.lwz.client.ZrpcClient;
+import com.lwz.registry.ServerInfo;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 
 import java.io.Closeable;
@@ -11,32 +12,38 @@ import java.io.Closeable;
  */
 public class ClientPool implements Closeable {
 
+    private ServerInfo serverInfo;
+
     private GenericObjectPool<ZrpcClient> zrpcClientPool;
 
-    public ClientPool(ClientProperties clientProperties) {
-        ClientFactory clientFactory = new ClientFactory(clientProperties);
-        zrpcClientPool = new GenericObjectPool<>(clientFactory, clientProperties.getPool());
+    public ClientPool(ServerInfo serverInfo, ClientProperties clientProperties) {
+        this.serverInfo = serverInfo;
+        ClientFactory clientFactory = new ClientFactory(serverInfo, clientProperties.getTimeout());
+        this.zrpcClientPool = new GenericObjectPool<>(clientFactory, clientProperties.getPool());
     }
 
     public ZrpcClient borrowObject() throws Exception {
         return zrpcClientPool.borrowObject();
     }
 
-    public void invalidateObject(ZrpcClient obj) throws Exception {
-        if (obj != null) {
-            zrpcClientPool.invalidateObject(obj);
+    public void invalidateObject(ZrpcClient zrpcClient) throws Exception {
+        if (zrpcClient != null) {
+            zrpcClientPool.invalidateObject(zrpcClient);
         }
     }
 
-    public void returnObject(ZrpcClient obj) throws Exception {
-        if (obj != null) {
-            zrpcClientPool.returnObject(obj);
+    public void returnObject(ZrpcClient zrpcClient) throws Exception {
+        if (zrpcClient != null) {
+            zrpcClientPool.returnObject(zrpcClient);
         }
     }
 
     @Override
     public void close() {
-        //TODO: 等待10秒, 然后逐个关闭
         zrpcClientPool.close();
+    }
+
+    public ServerInfo getServerInfo() {
+        return serverInfo;
     }
 }

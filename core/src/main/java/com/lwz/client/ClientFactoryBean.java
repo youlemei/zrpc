@@ -1,7 +1,7 @@
 package com.lwz.client;
 
 import com.lwz.annotation.Client;
-import com.lwz.client.pool.ClientPool;
+import com.lwz.client.pool.ClientManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -21,22 +21,22 @@ public class ClientFactoryBean implements FactoryBean, BeanFactoryAware {
 
     private BeanFactory beanFactory;
 
-    private ClientPool clientPool;
+    private ClientManager clientManager;
 
     @Override
     public Object getObject() throws Exception {
         Client client = clientInterface.getAnnotation(Client.class);
         ClientProperties clientProperties = beanFactory.getBean(client.value(), ClientProperties.class);
         //一个服务器一个连接池, 再包装一层, 方便进行负载均衡/熔断降级
-        this.clientPool = new ClientPool(clientProperties);
-        RequestInvoker requestInvoker = new RequestInvoker(clientInterface, clientPool);
+        this.clientManager = new ClientManager(clientProperties);
+        RequestInvoker requestInvoker = new RequestInvoker(clientInterface, clientManager);
         return Proxy.newProxyInstance(clientInterface.getClassLoader(), new Class[]{clientInterface}, requestInvoker);
     }
 
     @PreDestroy
     public void destroy() {
         log.info("destroy {}", clientInterface.getName());
-        clientPool.close();
+        clientManager.close();
     }
 
     @Override
