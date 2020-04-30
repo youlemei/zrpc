@@ -6,6 +6,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+
 /**
  * @author liweizhou 2020/4/5
  */
@@ -51,7 +53,10 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         //TODO: 异常处理
-        log.error("err:{} type:{}", cause.getMessage(), cause.getClass().getName());
+        log.error("server channel err:{} type:{}", cause.getMessage(), cause.getClass().getName(), cause);
+        if (cause instanceof IOException) {
+            ctx.channel().close();
+        }
     }
 
 }

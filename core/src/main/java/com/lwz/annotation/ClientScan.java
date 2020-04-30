@@ -19,6 +19,6 @@ public @interface ClientScan {
     /**
      * @return 扫描目录
      */
-    String value();
+    String[] value();
 
 }

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
+import org.springframework.util.Assert;
 
 /**
  * @author liweizhou 2020/4/17
@@ -13,35 +14,34 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
 @Slf4j
 public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
+    private ClientPool clientPool;
+
     private ServerInfo serverInfo;
 
     private int timeout;
 
-    public ClientFactory(ServerInfo serverInfo, int timeout) {
+    public ClientFactory(ClientPool clientPool, ServerInfo serverInfo, int timeout) {
+        this.clientPool = clientPool;
         this.serverInfo = serverInfo;
         this.timeout = timeout;
     }
 
     @Override
     public PooledObject<ZrpcClient> makeObject() throws Exception {
-        ZrpcClient zrpcClient = new ZrpcClient(serverInfo, timeout);
+        //socket exception
+        ZrpcClient zrpcClient = new ZrpcClient(clientPool, serverInfo, timeout);
         return new DefaultPooledObject<>(zrpcClient);
     }
 
     @Override
     public void destroyObject(PooledObject<ZrpcClient> p) throws Exception {
         ZrpcClient zrpcClient = p.getObject();
-        if (zrpcClient != null) {
-            zrpcClient.close();
-        }
+        zrpcClient.close();
     }
 
     @Override
     public boolean validateObject(PooledObject<ZrpcClient> p) {
         ZrpcClient zrpcClient = p.getObject();
-        if (zrpcClient == null) {
-            return false;
-        }
         try {
             zrpcClient.ping();
             return true;
@@ -53,6 +53,7 @@ public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
     @Override
     public void activateObject(PooledObject<ZrpcClient> p) throws Exception {
+        Assert.isTrue(p.getObject().isActive(), "channel is inactive");
     }
 
     @Override

@@ -21,6 +21,7 @@
         <zookeeper_version>3.6.0</zookeeper_version>
         <lombok_version>1.18.10</lombok_version>
         <fastjson_version>1.2.68</fastjson_version>
+        <hystrix_version>1.5.18</hystrix_version>
     </properties>
 
 
@@ -45,11 +46,22 @@
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
                 <version>${zookeeper_version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>slf4j-log4j12</artifactId>
+                        <groupId>org.slf4j</groupId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.alibaba</groupId>
                 <artifactId>fastjson</artifactId>
                 <version>${fastjson_version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.netflix.hystrix</groupId>
+                <artifactId>hystrix-core</artifactId>
+                <version>${hystrix_version}</version>
             </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>

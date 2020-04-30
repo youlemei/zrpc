@@ -1,5 +1,6 @@
 package com.lwz.client;
 
+import com.lwz.client.pool.ClientPool;
 import com.lwz.codec.ZZPDecoder;
 import com.lwz.codec.ZZPEncoder;
 import com.lwz.message.ZZPHeader;
@@ -13,17 +14,17 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.Closeable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author liweizhou 2020/4/12
  */
 @Slf4j
-public class ZrpcClient implements Closeable {
+public class ZrpcClient {
+
+    private ClientPool clientPool;
 
     private ServerInfo serverInfo;
 
@@ -37,18 +38,21 @@ public class ZrpcClient implements Closeable {
 
     private ConcurrentMap<Integer, ResponseFutureImpl> responseFutureMap = new ConcurrentHashMap<>();
 
-    public ZrpcClient(ServerInfo serverInfo, int timeout) throws InterruptedException {
+    private AtomicBoolean stop = new AtomicBoolean(false);
+
+    public ZrpcClient(ClientPool clientPool, ServerInfo serverInfo, int timeout) throws InterruptedException {
+        this.clientPool = clientPool;
         this.serverInfo = serverInfo;
         this.timeout = timeout;
-        init();
+        initChannel();
     }
 
-    private void init() throws InterruptedException {
+    private void initChannel() throws InterruptedException {
         codec = new NioEventLoopGroup(1);
         Bootstrap client = new Bootstrap();
         client.group(codec)
                 .channel(NioSocketChannel.class)
-                //.option(ChannelOption.SO_TIMEOUT, clientConfig.getTimeout())
+                //.option(ChannelOption.SO_TIMEOUT, timeout)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
@@ -62,13 +66,14 @@ public class ZrpcClient implements Closeable {
         log.info("client connect {}:{} success.", serverInfo.getHost(), serverInfo.getPort());
     }
 
-    @Override
     public void close() {
         try {
-            //等待回应超时?
-            channel.channel().close().sync();
-            responseFutureMap.clear();
-            log.info("client close {}:{} success.", serverInfo.getHost(), serverInfo.getPort());
+            if (stop.compareAndSet(false, true)) {
+                //等待回应超时?
+                channel.channel().close().sync();
+                responseFutureMap.clear();
+                log.info("client close {}:{} success.", serverInfo.getHost(), serverInfo.getPort());
+            }
         } catch (Exception e) {
             log.warn("client close {}:{} fail. err:{}", serverInfo.getHost(), serverInfo.getPort(), e.getMessage(), e);
         } finally {
@@ -80,13 +85,25 @@ public class ZrpcClient implements Closeable {
         int seq = this.seq.incrementAndGet();
         zzpMessage.getHeader().setSeq(seq);
         ResponseFutureImpl responseFuture = new ResponseFutureImpl<>(returnType);
-        responseFutureMap.put(seq, responseFuture);
+        registryResponseFuture(seq, responseFuture);
         channel.channel().writeAndFlush(zzpMessage);
         return responseFuture;
     }
 
+    private ResponseFutureImpl registryResponseFuture(int seq, ResponseFutureImpl responseFuture) {
+        //注册超时
+        codec.schedule(() -> {
+            ResponseFutureImpl future = responseFutureMap.remove(seq);
+            if (future != null) {
+                future.fail(new TimeoutException("request timeout"));
+                //n次后
+                //clientPool.invalidateObject(this);
+            }
+        }, timeout, TimeUnit.SECONDS);
+        return responseFutureMap.put(seq, responseFuture);
+    }
+
     public ResponseFutureImpl getResponseFuture(int seq) {
-        //TODO: 防止OOM问题
         return responseFutureMap.remove(seq);
     }
 
@@ -102,8 +119,16 @@ public class ZrpcClient implements Closeable {
         ZZPMessage zzpMessage = new ZZPMessage();
         zzpMessage.setHeader(zzpHeader);
         ResponseFutureImpl responseFuture = new ResponseFutureImpl<>();
-        responseFutureMap.put(seq, responseFuture);
+        registryResponseFuture(seq, responseFuture);
         channel.channel().writeAndFlush(zzpMessage);
         responseFuture.get();
+    }
+
+    public boolean isActive() {
+        return channel.channel().isActive();
+    }
+
+    public void disablePool() {
+        clientPool.disable();
     }
 }

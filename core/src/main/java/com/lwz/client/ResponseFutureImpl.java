@@ -138,8 +138,21 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
         interruptThreads.remove(Thread.currentThread());
     }
 
+    public void fail(Throwable cause) {
+        synchronized (lock) {
+            this.e = new ExecutionException(cause);
+            if (this.status == Status.RUN) {
+                this.status = Status.DONE;
+            }
+            lock.notifyAll();
+            futureCallbackRegistry.failure(cause);
+            //onSuccess
+            //onFail
+        }
+    }
+
     //TODO: 超时问题, 容易无限等待
-    public void complete(T data) {
+    public void success(T data) {
         synchronized (lock) {
             readResp(data);
             if (this.status == Status.RUN) {

@@ -13,5 +13,7 @@ public interface ResponseFuture<T> extends Future<T> {
     ResponseFuture<T> onSuccess(SuccessCallback<T> success);
     
     ResponseFuture<T> onFail(FailureCallback fail);
+
+    //delegate DefaultPromise
     
 }

@@ -24,6 +24,7 @@ import org.springframework.boot.ApplicationRunner;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author liweizhou 2020/4/6
@@ -47,6 +48,8 @@ public class ZrpcServer implements ApplicationRunner {
 
     private String uuid;
 
+    private AtomicBoolean stop = new AtomicBoolean(false);
+
     public ZrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler) {
         this.serverProperties = serverProperties;
         this.dispatcherHandler = dispatcherHandler;
@@ -54,7 +57,7 @@ public class ZrpcServer implements ApplicationRunner {
     }
 
     @PostConstruct
-    public void init() {
+    public void initServerChannel() {
         try {
             selectorGroup = new NioEventLoopGroup(1);
             codecGroup = new NioEventLoopGroup();
@@ -86,13 +89,15 @@ public class ZrpcServer implements ApplicationRunner {
     @PreDestroy
     public void destroy(){
         try {
-            if (registrar != null) {
-                registrar.signOut();
-            }
-            if (channel != null) {
-                //TODO: 优雅停机
-                channel.channel().close().sync();
-                log.info("server {} close success", serverProperties.getPort());
+            if (stop.compareAndSet(false, true)) {
+                if (registrar != null) {
+                    registrar.signOut();
+                }
+                if (channel != null) {
+                    //TODO: 优雅停机
+                    channel.channel().close().sync();
+                    log.info("server {} close success", serverProperties.getPort());
+                }
             }
         } catch (Exception e) {
             log.warn("server {} close fail. err:{}", serverProperties.getPort(), e.getMessage());

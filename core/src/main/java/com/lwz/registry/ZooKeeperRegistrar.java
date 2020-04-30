@@ -14,6 +14,7 @@ import org.apache.zookeeper.data.Stat;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.util.Assert;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -39,10 +40,15 @@ public class ZooKeeperRegistrar implements Registrar {
         initZookeeper();
     }
 
+    //默认配置
+    int zookeeperSessionTimeout = 10000;
+    Duration initZookeeperTimeout = Duration.ofSeconds(5);
+    Duration addZookeeperWatchTimeout = Duration.ofSeconds(5);
+
     private void initZookeeper() {
         try {
             CountDownLatch initZookeeper = new CountDownLatch(1);
-            zooKeeper = new ZooKeeper(registryProperties.getRegistryUrl(), 10000, event -> {
+            zooKeeper = new ZooKeeper(registryProperties.getRegistryUrl(), zookeeperSessionTimeout, event -> {
                 log.info("zookeeper event:{}", event);
                 if (event.getState() == KeeperState.SyncConnected) {
                     log.info("initZookeeper success. zookeeper:{}", registryProperties.getRegistryUrl());
@@ -50,7 +56,7 @@ public class ZooKeeperRegistrar implements Registrar {
                 }
                 //Expired/Disconnected重试,重新注册watch
             });
-            Assert.isTrue(initZookeeper.await(5, TimeUnit.SECONDS), "timeout");
+            Assert.isTrue(initZookeeper.await(initZookeeperTimeout.getSeconds(), TimeUnit.SECONDS), "timeout");
         } catch (Exception e) {
             log.warn("initZookeeper fail. zookeeper:{} err:{}", registryProperties.getRegistryUrl(), e.getMessage(), e);
             throw new BeanCreationException(String.format("initZookeeper fail. zookeeper:%s err:%s",
@@ -72,7 +78,7 @@ public class ZooKeeperRegistrar implements Registrar {
             zooKeeper.addWatch(path, event -> getServerChildren(path, watchExecutor), AddWatchMode.PERSISTENT_RECURSIVE);
         } catch (Exception e) {
             log.error("initWatch fail. server:{} err:{}", path, e.getMessage());
-            watchExecutor.schedule(() -> addWatch(path, watchExecutor), 5, TimeUnit.SECONDS);
+            watchExecutor.schedule(() -> addWatch(path, watchExecutor), addZookeeperWatchTimeout.getSeconds(), TimeUnit.SECONDS);
         }
     }
 

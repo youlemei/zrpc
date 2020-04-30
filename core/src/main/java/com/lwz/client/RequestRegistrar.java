@@ -25,19 +25,21 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar {
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
         Map<String, Object> clientScan = importingClassMetadata.getAnnotationAttributes(ClientScan.class.getName());
-        String clientPackage = clientScan.get("value").toString();
+        String[] clientPackages = (String[]) clientScan.get("value");
         ClientScanner scanner = new ClientScanner();
-        Set<BeanDefinition> clientDefinitionSet = scanner.findCandidateComponents(clientPackage);
-        for (BeanDefinition clientDefinition : clientDefinitionSet) {
-            try {
-                Class<?> clientInterface = Class.forName(clientDefinition.getBeanClassName());
-                GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
-                beanDefinition.setBeanClass(ClientFactoryBean.class);
-                beanDefinition.getPropertyValues().add("clientInterface", clientInterface);
-                log.info("registry {}", clientInterface.getName());
-                registry.registerBeanDefinition(StringUtils.uncapitalize(clientInterface.getSimpleName()), beanDefinition);
-            } catch (ClassNotFoundException e) {
-                //ignore
+        for (String clientPackage : clientPackages) {
+            Set<BeanDefinition> clientDefinitionSet = scanner.findCandidateComponents(clientPackage);
+            for (BeanDefinition clientDefinition : clientDefinitionSet) {
+                try {
+                    Class<?> clientInterface = Class.forName(clientDefinition.getBeanClassName());
+                    GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
+                    beanDefinition.setBeanClass(ClientFactoryBean.class);
+                    beanDefinition.getPropertyValues().add("clientInterface", clientInterface);
+                    log.info("registry {}", clientInterface.getName());
+                    registry.registerBeanDefinition(StringUtils.uncapitalize(clientInterface.getSimpleName()), beanDefinition);
+                } catch (ClassNotFoundException e) {
+                    //ignore
+                }
             }
         }
     }
