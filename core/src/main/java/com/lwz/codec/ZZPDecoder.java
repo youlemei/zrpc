@@ -34,9 +34,7 @@ public class ZZPDecoder extends ByteToMessageDecoder {
                 return;
             }
 
-            //TODO: 结束
-
-            ByteBuf headerBuf = in.slice(in.readerIndex(), in.readerIndex() + ZZPHeader.HEADER_LENGTH);
+            ByteBuf headerBuf = in.slice(in.readerIndex(), ZZPHeader.HEADER_LENGTH);
             ZZPHeader header = Messager.read(headerBuf, ZZPHeader.class);
             int length = header.getLength();
             if (length > MAX_MESSAGE_LENGTH) {

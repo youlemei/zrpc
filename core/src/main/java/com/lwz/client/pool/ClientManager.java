@@ -9,6 +9,7 @@ import com.lwz.registry.ZooKeeperRegistrar;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -68,12 +69,19 @@ public class ClientManager {
 
     public ZrpcClient borrowObject() throws Exception {
         List<ClientPool> clientPools = checkForBorrow();
-        int index = ThreadLocalRandom.current().nextInt(clientPools.size());
         //调用时间加入权重
-        //服务器升级-暂时不可用, 应采取nginx的暂时摘除策略, Socket异常销毁链接, 暂时摘除, n秒后重试
+        int index = ThreadLocalRandom.current().nextInt(clientPools.size());
         //熔断降级应该是对服务整体而言的, Fallback处理, Reject异常(配置要恰当)
         //TODO: 超时熔断
-        return clientPools.get(index).borrowObject();
+        ClientPool clientPool = clientPools.get(index);
+        try {
+            return clientPool.borrowObject();
+        } catch (Exception e) {
+            if (e instanceof IOException) {
+                clientPool.disable();
+            }
+            throw e;
+        }
     }
 
     private List<ClientPool> checkForBorrow() {
@@ -83,7 +91,7 @@ public class ClientManager {
             //ignore
         }
         List<ClientPool> clientPoolList = this.clientPoolList;
-        log.debug("borrowObject clientPoolList:{}", clientPoolList.size());
+        //服务器升级-暂时不可用, 应采取nginx的暂时摘除策略, Socket异常销毁链接, 暂时摘除, n秒后重试
         List<ClientPool> clientPools = clientPoolList.stream().filter(ClientPool::isAvailable).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(clientPools)) {
             throw new NoSuchElementException("no available server");
@@ -91,7 +99,7 @@ public class ClientManager {
         return clientPools;
     }
 
-    public void returnObject(ZrpcClient zrpcClient) throws Exception {
+    public void returnObject(ZrpcClient zrpcClient) {
         if (zrpcClient != null) {
             List<ClientPool> clientPools = this.clientPoolList;
             ClientPool clientPool = findByServerInfo(clientPools, zrpcClient.getServerInfo());

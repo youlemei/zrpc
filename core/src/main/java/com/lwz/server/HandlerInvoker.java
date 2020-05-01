@@ -48,6 +48,7 @@ public class HandlerInvoker {
 
     public void handle(ChannelHandlerContext ctx, ZZPMessage msg) throws Exception {
         //拼参, 调用, 返回
+        //TODO: 接口化 decode encode handle
         Object[] args = getMethodArgs(msg);
         Object result = method.invoke(bean, args);
         ZZPMessage message = new ZZPMessage();

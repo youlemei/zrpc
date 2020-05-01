@@ -14,6 +14,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,7 +44,7 @@ public class ZrpcClient {
     public ZrpcClient(ClientPool clientPool, ServerInfo serverInfo, int timeout) throws InterruptedException {
         this.clientPool = clientPool;
         this.serverInfo = serverInfo;
-        this.timeout = timeout;
+        this.timeout = timeout > 0 ? timeout : ClientProperties.DEFAULT_TIMEOUT;
         initChannel();
     }
 
@@ -52,7 +53,6 @@ public class ZrpcClient {
         Bootstrap client = new Bootstrap();
         client.group(codec)
                 .channel(NioSocketChannel.class)
-                //.option(ChannelOption.SO_TIMEOUT, timeout)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
@@ -67,15 +67,24 @@ public class ZrpcClient {
     }
 
     public void close() {
+        log.info("close remainSize:{}", responseFutureMap.size());
+        if (responseFutureMap.isEmpty()) {
+            doClose();
+        } else {
+            //等待回应超时
+            codec.schedule(() -> doClose(), timeout, TimeUnit.SECONDS);
+        }
+    }
+
+    private void doClose() {
         try {
             if (stop.compareAndSet(false, true)) {
-                //等待回应超时?
                 channel.channel().close().sync();
                 responseFutureMap.clear();
-                log.info("client close {}:{} success.", serverInfo.getHost(), serverInfo.getPort());
+                log.info("client close success. {}:{}", serverInfo.getHost(), serverInfo.getPort());
             }
         } catch (Exception e) {
-            log.warn("client close {}:{} fail. err:{}", serverInfo.getHost(), serverInfo.getPort(), e.getMessage(), e);
+            log.warn("client close fail. {}:{} err:{}", serverInfo.getHost(), serverInfo.getPort(), e.getMessage(), e);
         } finally {
             codec.shutdownGracefully();
         }
@@ -95,7 +104,7 @@ public class ZrpcClient {
         codec.schedule(() -> {
             ResponseFutureImpl future = responseFutureMap.remove(seq);
             if (future != null) {
-                future.fail(new TimeoutException("request timeout"));
+                future.fail(new TimeoutException(String.format("request timeout. begin:%s now:%s", future.getCreate(), LocalDateTime.now())));
                 //n次后
                 //clientPool.invalidateObject(this);
             }
@@ -124,11 +133,14 @@ public class ZrpcClient {
         responseFuture.get();
     }
 
-    public boolean isActive() {
-        return channel.channel().isActive();
+    public boolean isOpen() {
+        //isActive底层会同步判断状态, 效率较低
+        return channel.channel().isOpen();
     }
 
     public void disablePool() {
         clientPool.disable();
+        clientPool.invalidateObject(this);
     }
+
 }

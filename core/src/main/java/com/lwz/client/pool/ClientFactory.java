@@ -28,7 +28,6 @@ public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
     @Override
     public PooledObject<ZrpcClient> makeObject() throws Exception {
-        //socket exception
         ZrpcClient zrpcClient = new ZrpcClient(clientPool, serverInfo, timeout);
         return new DefaultPooledObject<>(zrpcClient);
     }
@@ -53,7 +52,7 @@ public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
 
     @Override
     public void activateObject(PooledObject<ZrpcClient> p) throws Exception {
-        Assert.isTrue(p.getObject().isActive(), "channel is inactive");
+        Assert.isTrue(p.getObject().isOpen(), "channel is inactive");
     }
 
     @Override

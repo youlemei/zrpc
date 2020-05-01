@@ -1,25 +1,23 @@
 package com.lwz.client;
 
-import com.lwz.annotation.Message;
 import com.lwz.annotation.Request;
 import com.lwz.client.pool.ClientManager;
-import com.lwz.message.ZZPHeader;
-import com.lwz.message.ZZPMessage;
+import com.lwz.client.pool.ZrpcCommand;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Future;
 
 /**
  * @author liweizhou 2020/4/13
  */
 @Data
+@Slf4j
 public class RequestInvoker implements InvocationHandler {
 
     private ClientManager clientManager;
@@ -36,19 +34,7 @@ public class RequestInvoker implements InvocationHandler {
         for (Method method : methods) {
             Request request = method.getAnnotation(Request.class);
             Assert.notNull(request, "method must annotation with @Request");
-            int index = -1;
-            Class<?>[] parameterTypes = method.getParameterTypes();
-            for (int i = 0; i < parameterTypes.length; i++) {
-                if (parameterTypes[i].getAnnotation(Message.class) != null) {
-                    index = i;
-                    break;
-                }
-            }
-            Class<?> returnType = method.getReturnType();
-            if (!returnType.equals(void.class) && !Future.class.isAssignableFrom(returnType)) {
-                Assert.notNull(returnType.getAnnotation(Message.class), "method return type must annotation with @Message");
-            }
-            metadataMap.put(method, new MethodMetadata(request, index));
+            metadataMap.put(method, new MethodMetadata(request, method));
         }
     }
 
@@ -67,36 +53,14 @@ public class RequestInvoker implements InvocationHandler {
         if (methodMetadata == null) {
             return null;
         }
-        ZrpcClient zrpcClient = null;
-        ResponseFuture responseFuture;
-        Class<?> returnType = method.getReturnType();
-        Class<?> actualType = returnType;
-        if (Future.class.isAssignableFrom(returnType)) {
-            ParameterizedType genericReturnType = (ParameterizedType) method.getGenericReturnType();
-            //genericReturnType.getRawType() is Future.class
-            actualType = (Class<?>) genericReturnType.getActualTypeArguments()[0];
-        }
         try {
-            ZZPMessage message = new ZZPMessage();
-            ZZPHeader header = new ZZPHeader();
-            header.setUri(methodMetadata.getRequest().value());
-            message.setHeader(header);
-            if (methodMetadata.getArgsIndex() >= 0) {
-                message.setBody(args[methodMetadata.getArgsIndex()]);
-            }
-            zrpcClient = clientManager.borrowObject();
-            responseFuture = zrpcClient.request(message, actualType);
-        } finally {
-            clientManager.returnObject(zrpcClient);
+            ZrpcCommand zrpcCommand = new ZrpcCommand(methodMetadata, clientManager, args);
+            return zrpcCommand.execute();
+        } catch (Exception e) {
+            log.warn("invoke fail. err:{} type:{}", e.getMessage(), e.getClass().getName());
+            throw e.getCause();
+            //return null;
         }
-        if (returnType.equals(void.class)) {
-            return null;
-        }
-        if (Future.class.isAssignableFrom(returnType)) {
-            return responseFuture;
-        }
-        //TODO: 默认超时设置 结合熔断
-        return responseFuture.get();
     }
 
 }

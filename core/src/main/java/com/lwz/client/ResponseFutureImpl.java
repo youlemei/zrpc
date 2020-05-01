@@ -6,12 +6,14 @@ import org.springframework.util.concurrent.FailureCallback;
 import org.springframework.util.concurrent.ListenableFutureCallbackRegistry;
 import org.springframework.util.concurrent.SuccessCallback;
 
+import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author liweizhou 2020/3/29
@@ -22,13 +24,21 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
 
     private volatile Status status = Status.RUN;
 
-    private volatile ExecutionException e;
-
-    private Object lock = new Object();
+    private volatile Throwable e;
 
     private List<Thread> interruptThreads;
 
     private Class<T> returnType;
+
+    private LocalDateTime create = LocalDateTime.now();
+
+    private AtomicReference<Result<T>> result = new AtomicReference<>();
+
+    private static final Result SUCCESS = new Result<>();
+
+    static class Result<T> {
+        T data;
+    }
 
     enum Status {
         RUN, DONE, CANCEL
@@ -47,7 +57,7 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
             return false;
         }
         if (status == Status.RUN) {
-            synchronized (lock) {
+            synchronized (this) {
                 if (status == Status.DONE) {
                     return false;
                 }
@@ -80,17 +90,17 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
             return data;
         }
         checkCancel();
-        synchronized (lock) {
+        synchronized (this) {
             if (status == Status.DONE) {
                 return data;
             }
             checkCancel();
             addInterruptThread();
-            lock.wait();
+            this.wait();
             removeInterruptThread();
             checkCancel();
             if (e != null) {
-                throw e;
+                throw new ExecutionException(e);
             }
             return data;
         }
@@ -108,17 +118,17 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
             return data;
         }
         checkCancel();
-        synchronized (lock) {
+        synchronized (this) {
             if (status == Status.DONE) {
                 return data;
             }
             checkCancel();
             addInterruptThread();
-            lock.wait(unit.toMillis(timeout));
+            this.wait(unit.toMillis(timeout));
             removeInterruptThread();
             checkCancel();
             if (e != null) {
-                throw e;
+                throw new ExecutionException(e);
             }
             if (status == Status.RUN) {
                 throw new TimeoutException(String.format("ResponseFuture timeout %d millis.", unit.toMillis(timeout)));
@@ -139,41 +149,37 @@ public class ResponseFutureImpl<T> implements ResponseFuture<T> {
     }
 
     public void fail(Throwable cause) {
-        synchronized (lock) {
-            this.e = new ExecutionException(cause);
+        //报告失败
+        synchronized (this) {
+            this.e = cause;
             if (this.status == Status.RUN) {
                 this.status = Status.DONE;
             }
-            lock.notifyAll();
+            this.notifyAll();
             futureCallbackRegistry.failure(cause);
             //onSuccess
             //onFail
         }
     }
 
-    //TODO: 超时问题, 容易无限等待
     public void success(T data) {
-        synchronized (lock) {
-            readResp(data);
+        synchronized (this) {
+            if (returnType != null) {
+                ByteBuf byteBuf = (ByteBuf) data;
+                this.data = Messager.read(byteBuf, returnType);
+            }
             if (this.status == Status.RUN) {
                 this.status = Status.DONE;
             }
-            lock.notifyAll();
+            this.notifyAll();
             futureCallbackRegistry.success(this.data);
             //onSuccess
             //onFail
         }
     }
 
-    private void readResp(T data) {
-        if (returnType == null) {
-            return;
-        }
-        if (void.class.equals(returnType)) {
-            return;
-        }
-        ByteBuf byteBuf = (ByteBuf) data;
-        this.data = Messager.read(byteBuf, returnType);
+    public LocalDateTime getCreate() {
+        return create;
     }
 
     private ListenableFutureCallbackRegistry futureCallbackRegistry = new ListenableFutureCallbackRegistry();

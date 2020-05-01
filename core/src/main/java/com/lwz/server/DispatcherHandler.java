@@ -4,6 +4,7 @@ import com.lwz.message.ZZPMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -42,17 +43,20 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
             handler.applyPostHandle(ctx, msg);
 
         } catch (Throwable e) {
-            e.printStackTrace();
+            //responseErr();
+            log.error("channelRead0 fail. header:{} err:{}", msg.getHeader(), e.getMessage(), e);
+
         } finally {
 
             //ThreadLocal.remove
+            ReferenceCountUtil.release(msg.getBody());
         }
 
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        //TODO: 异常处理
+        // 异常处理
         log.error("server channel err:{} type:{}", cause.getMessage(), cause.getClass().getName(), cause);
         if (cause instanceof IOException) {
             ctx.channel().close();

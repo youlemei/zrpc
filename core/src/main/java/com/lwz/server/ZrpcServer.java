@@ -2,6 +2,7 @@ package com.lwz.server;
 
 import com.lwz.codec.ZZPDecoder;
 import com.lwz.codec.ZZPEncoder;
+import com.lwz.registry.DirectRegistrar;
 import com.lwz.registry.Registrar;
 import com.lwz.registry.ServerInfo;
 import com.lwz.registry.ZooKeeperRegistrar;
@@ -65,7 +66,6 @@ public class ZrpcServer implements ApplicationRunner {
             ServerBootstrap server = new ServerBootstrap();
             server.group(selectorGroup, codecGroup)
                     .channel(NioServerSocketChannel.class)
-                    //.childOption(ChannelOption.SO_TIMEOUT, serverConfig.getTimeout())
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
@@ -90,14 +90,10 @@ public class ZrpcServer implements ApplicationRunner {
     public void destroy(){
         try {
             if (stop.compareAndSet(false, true)) {
-                if (registrar != null) {
-                    registrar.signOut();
-                }
-                if (channel != null) {
-                    //TODO: 优雅停机
-                    channel.channel().close().sync();
-                    log.info("server {} close success", serverProperties.getPort());
-                }
+                registrar.signOut();
+                // 优雅停机
+                channel.channel().close().sync();
+                log.info("server {} close success", serverProperties.getPort());
             }
         } catch (Exception e) {
             log.warn("server {} close fail. err:{}", serverProperties.getPort(), e.getMessage());
@@ -110,18 +106,22 @@ public class ZrpcServer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        if (serverProperties.getRegistry() != null && serverProperties.getRegistry().getRegistryType() != null) {
-            ServerInfo serverInfo = new ServerInfo(IPUtils.getIp(), serverProperties.getPort());
+        if (serverProperties.getRegistry() == null || serverProperties.getRegistry().getRegistryType() == null) {
+            registrar = new DirectRegistrar();
+        } else {
             switch (serverProperties.getRegistry().getRegistryType()) {
                 case ZOOKEEPER:
                     registrar = new ZooKeeperRegistrar(serverProperties.getRegistry());
-                    registrar.signIn(serverInfo, uuid);
                     break;
                 default:
                     throw new IllegalArgumentException(String.format("registryType:%s not implement",
                             serverProperties.getRegistry().getRegistryType()));
             }
         }
+
+        //注册
+        ServerInfo serverInfo = new ServerInfo(IPUtils.getIp(), serverProperties.getPort());
+        registrar.signIn(serverInfo, uuid);
     }
 
 }

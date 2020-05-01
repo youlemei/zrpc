@@ -15,6 +15,9 @@ public class DirectRegistrar implements Registrar {
 
     private List<ServerInfo> serverInfos;
 
+    public DirectRegistrar() {
+    }
+
     public DirectRegistrar(List<String> nodes) {
         Assert.isTrue(!CollectionUtils.isEmpty(nodes), "nodes must not empty");
         serverInfos = new ArrayList<>(nodes.size());

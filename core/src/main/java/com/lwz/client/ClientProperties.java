@@ -1,8 +1,8 @@
 package com.lwz.client;
 
+import com.lwz.client.pool.PoolProperties;
 import com.lwz.registry.RegistryProperties;
 import lombok.Data;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 import java.util.List;
 
@@ -12,12 +12,20 @@ import java.util.List;
 @Data
 public class ClientProperties {
 
+    public static final int DEFAULT_TIMEOUT = 10;
+
+    /**
+     * 直连节点
+     */
     private List<String> nodes;
 
-    private int timeout;
+    /**
+     * 请求超时(秒)
+     */
+    private int timeout = DEFAULT_TIMEOUT;
 
     private RegistryProperties registry;
 
-    private GenericObjectPoolConfig<ZrpcClient> pool;
+    private PoolProperties pool;
 
 }

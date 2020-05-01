@@ -54,7 +54,7 @@ public class ZooKeeperRegistrar implements Registrar {
                     log.info("initZookeeper success. zookeeper:{}", registryProperties.getRegistryUrl());
                     initZookeeper.countDown();
                 }
-                //Expired/Disconnected重试,重新注册watch
+                //TODO: Expired/Disconnected重试,重新注册watch
             });
             Assert.isTrue(initZookeeper.await(initZookeeperTimeout.getSeconds(), TimeUnit.SECONDS), "timeout");
         } catch (Exception e) {
@@ -117,7 +117,6 @@ public class ZooKeeperRegistrar implements Registrar {
     @Override
     public void signIn(ServerInfo serverInfo, String uuid) {
         String path = registryProperties.getRootPath() + "/" + registryProperties.getServerName() + "/" + uuid;
-        //TODO: 认证策略
         createServerNode(path, 0, serverInfo);
     }
 
