@@ -1,5 +1,8 @@
 package com.lwz.client.pool;
 
+import com.lwz.client.ClientFallback;
+import com.lwz.client.FallbackContext;
+import com.lwz.client.FallbackException;
 import com.lwz.client.MethodMetadata;
 import com.lwz.client.ResponseFuture;
 import com.lwz.client.ZrpcClient;
@@ -12,6 +15,7 @@ import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixEventType;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -23,9 +27,11 @@ public class ZrpcCommand extends HystrixCommand {
 
     private ClientManager clientManager;
 
+    private Object clientFallback;
+
     private Object[] args;
 
-    public ZrpcCommand(MethodMetadata methodMetadata, ClientManager clientManager, Object[] args) {
+    public ZrpcCommand(MethodMetadata methodMetadata, ClientManager clientManager, Object clientFallback, Object[] args) {
         super(Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey(methodMetadata.getServerKey()))
                 .andCommandKey(HystrixCommandKey.Factory.asKey(methodMetadata.getMethodKey()))
                 .andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(methodMetadata.getMethodKey()))
@@ -34,6 +40,7 @@ public class ZrpcCommand extends HystrixCommand {
         );
         this.methodMetadata = methodMetadata;
         this.clientManager = clientManager;
+        this.clientFallback = clientFallback;
         this.args = args;
     }
 
@@ -70,10 +77,26 @@ public class ZrpcCommand extends HystrixCommand {
         return responseFuture.get();
     }
 
-    //@Override
-    //protected Object getFallback() {
-    //    Throwable executionException = getExecutionException();
-    //    throw new RuntimeException(executionException);
-    //}
+    @Override
+    protected Object getFallback() {
+        try {
+            //未实现, 抛run异常 实现了, 抛fallback异常
+            if (clientFallback == null) {
+                throw FallbackException.FALLBACK_NOT_FOUND;
+            }
+            Throwable executionException = getExecutionException();
+            FallbackContext fallbackContext = new FallbackContext();
+            fallbackContext.setCause(executionException);
+            ClientFallback.FALLBACK_THREAD_LOCAL.set(fallbackContext);
+            return methodMetadata.getMethod().invoke(clientFallback, args);
+        } catch (Throwable e) {
+            if (e instanceof InvocationTargetException) {
+                e = ((InvocationTargetException) e).getTargetException();
+            }
+            throw new FallbackException(e);
+        } finally {
+            ClientFallback.FALLBACK_THREAD_LOCAL.remove();
+        }
+    }
 
 }

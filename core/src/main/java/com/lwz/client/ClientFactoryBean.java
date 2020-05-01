@@ -19,6 +19,8 @@ public class ClientFactoryBean implements FactoryBean, BeanFactoryAware {
 
     private Class<?> clientInterface;
 
+    private Object clientFallback;
+
     private BeanFactory beanFactory;
 
     private ClientManager clientManager;
@@ -29,7 +31,7 @@ public class ClientFactoryBean implements FactoryBean, BeanFactoryAware {
         ClientProperties clientProperties = beanFactory.getBean(client.value(), ClientProperties.class);
         //一个服务器一个连接池, 方便进行负载均衡/服务升级剔除/熔断降级
         this.clientManager = new ClientManager(clientProperties);
-        RequestInvoker requestInvoker = new RequestInvoker(clientInterface, clientManager);
+        RequestInvoker requestInvoker = new RequestInvoker(clientInterface, clientManager, clientFallback);
         return Proxy.newProxyInstance(clientInterface.getClassLoader(), new Class[]{clientInterface}, requestInvoker);
     }
 
@@ -52,4 +54,9 @@ public class ClientFactoryBean implements FactoryBean, BeanFactoryAware {
     public void setClientInterface(Class<?> clientInterface) {
         this.clientInterface = clientInterface;
     }
+
+    public void setClientFallback(Object clientFallback) {
+        this.clientFallback = clientFallback;
+    }
+
 }

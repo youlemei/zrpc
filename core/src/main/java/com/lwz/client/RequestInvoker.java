@@ -3,6 +3,7 @@ package com.lwz.client;
 import com.lwz.annotation.Request;
 import com.lwz.client.pool.ClientManager;
 import com.lwz.client.pool.ZrpcCommand;
+import com.netflix.hystrix.exception.HystrixRuntimeException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
@@ -22,10 +23,13 @@ public class RequestInvoker implements InvocationHandler {
 
     private ClientManager clientManager;
 
+    private Object clientFallback;
+
     private ConcurrentMap<Method, MethodMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    public RequestInvoker(Class<?> clientInterface, ClientManager clientManager) {
+    public RequestInvoker(Class<?> clientInterface, ClientManager clientManager, Object clientFallback) {
         this.clientManager = clientManager;
+        this.clientFallback = clientFallback;
         init(clientInterface);
     }
 
@@ -54,12 +58,22 @@ public class RequestInvoker implements InvocationHandler {
             return null;
         }
         try {
-            ZrpcCommand zrpcCommand = new ZrpcCommand(methodMetadata, clientManager, args);
+            //熔断降级应该是对服务整体而言的
+            ZrpcCommand zrpcCommand = new ZrpcCommand(methodMetadata, clientManager, clientFallback, args);
             return zrpcCommand.execute();
-        } catch (Exception e) {
-            log.warn("invoke fail. err:{} type:{}", e.getMessage(), e.getClass().getName());
-            throw e.getCause();
-            //return null;
+        } catch (Throwable e) {
+            if (e instanceof HystrixRuntimeException) {
+                HystrixRuntimeException hystrix = (HystrixRuntimeException) e;
+                Throwable fallbackException = hystrix.getFallbackException();
+                if (fallbackException instanceof FallbackException) {
+                    if (fallbackException == FallbackException.FALLBACK_NOT_FOUND) {
+                        throw hystrix.getCause();
+                    }
+                    throw fallbackException.getCause();
+                }
+                throw hystrix.getCause();
+            }
+            throw e;
         }
     }
 

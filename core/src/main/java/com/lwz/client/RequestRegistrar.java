@@ -3,6 +3,9 @@ package com.lwz.client;
 import com.lwz.annotation.Client;
 import com.lwz.annotation.ClientScan;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -20,7 +23,9 @@ import java.util.Set;
  * @author liweizhou 2020/4/12
  */
 @Slf4j
-public class RequestRegistrar implements ImportBeanDefinitionRegistrar {
+public class RequestRegistrar implements ImportBeanDefinitionRegistrar, BeanFactoryAware {
+
+    private BeanFactory beanFactory;
 
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
@@ -35,6 +40,10 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar {
                     GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
                     beanDefinition.setBeanClass(ClientFactoryBean.class);
                     beanDefinition.getPropertyValues().add("clientInterface", clientInterface);
+                    Object fallback = beanFactory.getBean(clientInterface);
+                    if (fallback instanceof ClientFallback) {
+                        beanDefinition.getPropertyValues().add("clientFallback", fallback);
+                    }
                     log.info("registry {}", clientInterface.getName());
                     registry.registerBeanDefinition(StringUtils.uncapitalize(clientInterface.getSimpleName()), beanDefinition);
                 } catch (ClassNotFoundException e) {
@@ -42,6 +51,11 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar {
                 }
             }
         }
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        this.beanFactory = beanFactory;
     }
 
     class ClientScanner extends ClassPathScanningCandidateComponentProvider {

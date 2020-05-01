@@ -30,7 +30,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
 
         }
 
-        //TODO: 调用链 ThreadLocal
+        //TODO: 调用链 请求信息(ip/port/header) ThreadLocal
 
         try {
             if (!handler.applyPreHandle(ctx, msg)) {

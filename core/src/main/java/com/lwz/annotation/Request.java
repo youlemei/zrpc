@@ -17,6 +17,4 @@ public @interface Request {
      */
     int value();
 
-    //TODO: 熔断/fallback配置
-
 }

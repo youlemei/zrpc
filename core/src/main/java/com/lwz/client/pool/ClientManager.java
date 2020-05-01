@@ -71,8 +71,6 @@ public class ClientManager {
         List<ClientPool> clientPools = checkForBorrow();
         //调用时间加入权重
         int index = ThreadLocalRandom.current().nextInt(clientPools.size());
-        //熔断降级应该是对服务整体而言的, Fallback处理, Reject异常(配置要恰当)
-        //TODO: 超时熔断
         ClientPool clientPool = clientPools.get(index);
         try {
             return clientPool.borrowObject();
