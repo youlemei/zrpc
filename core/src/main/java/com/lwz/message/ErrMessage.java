@@ -17,7 +17,4 @@ public class ErrMessage {
     @Field(2)
     private String exception;
 
-    public static ErrMessage fromException(Exception e) {
-        return new ErrMessage();
-    }
 }

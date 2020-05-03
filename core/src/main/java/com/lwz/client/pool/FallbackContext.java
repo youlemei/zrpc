@@ -1,4 +1,4 @@
-package com.lwz.client;
+package com.lwz.client.pool;
 
 import lombok.Data;
 

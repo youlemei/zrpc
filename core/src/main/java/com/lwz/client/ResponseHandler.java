@@ -1,9 +1,9 @@
 package com.lwz.client;
 
-import com.lwz.codec.Codecs;
+import com.lwz.codec.ZrpcCodecs;
 import com.lwz.message.ErrMessage;
 import com.lwz.message.Header;
-import com.lwz.message.ZrpcDecodeObj;
+import com.lwz.message.DecodeObj;
 import com.lwz.server.HandlerException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -16,7 +16,7 @@ import java.io.IOException;
  * @author liweizhou 2020/4/12
  */
 @Slf4j
-public class ResponseHandler extends SimpleChannelInboundHandler<ZrpcDecodeObj> {
+public class ResponseHandler extends SimpleChannelInboundHandler<DecodeObj> {
 
     private ZrpcClient zrpcClient;
 
@@ -25,16 +25,16 @@ public class ResponseHandler extends SimpleChannelInboundHandler<ZrpcDecodeObj> 
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ZrpcDecodeObj msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, DecodeObj msg) throws Exception {
         try {
             Header header = msg.getHeader();
             ResponseFutureImpl responseFuture = zrpcClient.getResponseFuture(header.getSeq());
             if (responseFuture != null) {
                 if (header.isException()) {
-                    ErrMessage err = Codecs.read(msg.getBody(), ErrMessage.class);
+                    ErrMessage err = ZrpcCodecs.read(msg.getBody(), ErrMessage.class);
                     responseFuture.fail(new HandlerException(err.getMessage()));
                 } else {
-                    Object resp = Codecs.read(msg.getBody(), responseFuture.getReturnType());
+                    Object resp = ZrpcCodecs.read(msg.getBody(), responseFuture.getReturnType());
                     responseFuture.success(resp);
                 }
             }

@@ -1,6 +1,6 @@
 package com.lwz.filter;
 
-import com.lwz.message.ZrpcDecodeObj;
+import com.lwz.message.DecodeObj;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
@@ -15,14 +15,14 @@ public interface Filter {
      * @param msg
      * @return
      */
-    boolean preHandle(ChannelHandlerContext ctx, ZrpcDecodeObj msg);
+    boolean preHandle(ChannelHandlerContext ctx, DecodeObj msg);
 
     /**
-     * 后置处理器, 根据前置处理器倒序处理
+     * 后置处理器
      *
      * @param ctx
      * @param msg
      */
-    void postHandle(ChannelHandlerContext ctx, ZrpcDecodeObj msg);
+    void postHandle(ChannelHandlerContext ctx, DecodeObj msg);
 
 }

@@ -1,5 +1,6 @@
 package com.lwz.codec;
 
+import com.alibaba.fastjson.JSON;
 import com.lwz.message.Header;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -14,7 +15,7 @@ import java.util.HashMap;
 /**
  * @author liweizhou 2020/5/2
  */
-public class CodecsTest {
+public class ZrpcCodecsTest {
 
     @Test
     public void testCodec() throws Exception {
@@ -26,24 +27,31 @@ public class CodecsTest {
         zzpHeader.setExt((short)5);
         ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
 
-        int length = Codecs.length(Header.class, zzpHeader);
-        Codecs.write(byteBuf, Header.class, zzpHeader);
+        int length = ZrpcCodecs.length(Header.class, zzpHeader);
+        ZrpcCodecs.write(byteBuf, Header.class, zzpHeader);
         Assert.isTrue(length == byteBuf.readableBytes(), "length fail");
-        Object header = Codecs.read(byteBuf, Header.class);
+        Object header = ZrpcCodecs.read(byteBuf, Header.class);
         Assert.isTrue(zzpHeader.equals(header), "read write fail");
 
 
-        Field field = CodecsTest.class.getDeclaredField("TEST_STRUCT");
+        Field field = ZrpcCodecsTest.class.getDeclaredField("TEST_STRUCT");
         Type fieldType = field.getGenericType();
-        Object data = field.get(CodecsTest.class);
-        length = Codecs.length(fieldType, data);
-        Codecs.write(byteBuf, fieldType, data);
+        Object data = field.get(ZrpcCodecsTest.class);
+        length = ZrpcCodecs.length(fieldType, data);
+        ZrpcCodecs.write(byteBuf, fieldType, data);
+        System.out.println(length);
         Assert.isTrue(length == byteBuf.readableBytes(), "struct length fail");
-        TestStruct<String, Long> struct = (TestStruct<String, Long>) Codecs.read(byteBuf, fieldType);
+        TestStruct<String, Long> struct = (TestStruct<String, Long>) ZrpcCodecs.read(byteBuf, fieldType);
         Assert.isTrue(TEST_STRUCT.equals(struct), "struct read write fail");
 
 
         byteBuf.release();
+    }
+
+    @Test
+    public void testJSON() throws Exception{
+        //事实上, json只在传输数字上比较吃亏
+        System.out.println(JSON.toJSONString(TEST_STRUCT).getBytes().length);
     }
 
 
@@ -52,15 +60,15 @@ public class CodecsTest {
     static {
         TestMessage<String, String, Long> testMessage = new TestMessage();
         testMessage.setT("yy");
-        testMessage.setList(Arrays.asList("a", "y", "b"));
+        testMessage.setList(Arrays.asList("abcd", "yy isd y", "bbbbb"));
         HashMap<String, Long> map = new HashMap<>();
-        map.put("y", 2L);
-        map.put("i", 2L);
+        map.put("yy", 222222L);
+        map.put("ii", 233333L);
         testMessage.setMap(map);
-        TEST_STRUCT = new TestStruct(123L, "lwz", Arrays.asList(1L, 2L, 3L), new HashMap<String, Long>(){{
-            put("l", 1L);
-            put("w", 2L);
-            put("z", 3L);
+        TEST_STRUCT = new TestStruct(123L, "what are", Arrays.asList(11111L, 222222L, 333333L), new HashMap<String, Long>(){{
+            put("lwwer", 19999L);
+            put("weedfd", 2999L);
+            put("z4534s", 3999L);
         }}, testMessage);
     }
 

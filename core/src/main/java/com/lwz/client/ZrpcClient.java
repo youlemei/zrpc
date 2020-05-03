@@ -4,7 +4,7 @@ import com.lwz.client.pool.ClientPool;
 import com.lwz.codec.ZrpcDecoder;
 import com.lwz.codec.ZrpcEncoder;
 import com.lwz.message.Header;
-import com.lwz.message.ZrpcEncodeObj;
+import com.lwz.message.EncodeObj;
 import com.lwz.registry.ServerInfo;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -49,7 +49,7 @@ public class ZrpcClient {
     public ZrpcClient(ClientPool clientPool, ServerInfo serverInfo, int timeout) throws Exception {
         this.clientPool = clientPool;
         this.serverInfo = serverInfo;
-        this.timeout = timeout > 0 ? timeout : ClientProperties.DEFAULT_TIMEOUT;
+        this.timeout = timeout > 0 ? timeout : ClientConfig.DEFAULT_TIMEOUT;
         initChannel();
     }
 
@@ -98,12 +98,12 @@ public class ZrpcClient {
         }
     }
 
-    public ResponseFuture request(ZrpcEncodeObj zrpcEncodeObj, Type returnType) {
+    public ResponseFuture request(EncodeObj encodeObj, Type returnType) {
         int seq = this.seq.incrementAndGet();
-        zrpcEncodeObj.getHeader().setSeq(seq);
+        encodeObj.getHeader().setSeq(seq);
         ResponseFutureImpl responseFuture = new ResponseFutureImpl(returnType);
         registryResponseFuture(seq, responseFuture);
-        channel.channel().writeAndFlush(zrpcEncodeObj);
+        channel.channel().writeAndFlush(encodeObj);
         return responseFuture;
     }
 
@@ -133,7 +133,7 @@ public class ZrpcClient {
         Header header = new Header();
         header.setSeq(seq);
         header.setExt(Header.PING);
-        ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+        EncodeObj encodeObj = new EncodeObj();
         encodeObj.setHeader(header);
         ResponseFutureImpl responseFuture = new ResponseFutureImpl();
         registryResponseFuture(seq, responseFuture);

@@ -1,6 +1,6 @@
 package com.lwz.client.pool;
 
-import com.lwz.client.ClientProperties;
+import com.lwz.client.ClientConfig;
 import com.lwz.client.ZrpcClient;
 import com.lwz.registry.ServerInfo;
 import io.netty.util.concurrent.DefaultEventExecutor;
@@ -31,11 +31,11 @@ public class ClientPool {
 
     public static final Duration RENEW_INTERVAL = Duration.ofSeconds(10);
 
-    public ClientPool(ClientManager clientManager, ServerInfo serverInfo, ClientProperties clientProperties) {
+    public ClientPool(ClientManager clientManager, ServerInfo serverInfo, ClientConfig clientConfig) {
         this.clientManager = clientManager;
         this.serverInfo = serverInfo;
-        ClientFactory clientFactory = new ClientFactory(this, serverInfo, clientProperties.getTimeout());
-        PoolProperties pool = clientProperties.getPool();
+        ClientFactory clientFactory = new ClientFactory(this, serverInfo, clientConfig.getTimeout());
+        PoolProperties pool = clientConfig.getPool();
         GenericObjectPoolConfig<ZrpcClient> poolConfig = new GenericObjectPoolConfig<>();
         if (pool != null) {
             poolConfig.setMaxTotal(pool.getMaxActive());

@@ -2,10 +2,8 @@ package com.lwz.server;
 
 import com.lwz.codec.ZrpcDecoder;
 import com.lwz.codec.ZrpcEncoder;
-import com.lwz.registry.DirectRegistrar;
 import com.lwz.registry.Registrar;
 import com.lwz.registry.ServerInfo;
-import com.lwz.registry.ZooKeeperRegistrar;
 import com.lwz.util.IPUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -24,7 +22,6 @@ import org.springframework.boot.ApplicationRunner;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -49,9 +46,10 @@ public class ZrpcServer implements ApplicationRunner {
 
     private AtomicBoolean stop = new AtomicBoolean(false);
 
-    public ZrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler) {
+    public ZrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler, Registrar registrar) {
         this.serverProperties = serverProperties;
         this.dispatcherHandler = dispatcherHandler;
+        this.registrar = registrar;
     }
 
     @PostConstruct
@@ -77,7 +75,7 @@ public class ZrpcServer implements ApplicationRunner {
             channel = server.bind(serverProperties.getPort()).sync();
             log.info("server bind {} success", serverProperties.getPort());
         } catch (Exception e) {
-            //启动失败, 手动结束
+            //启动失败, 手动结束 TODO: 某些情况还是结束不了
             destroy();
             throw new BeanCreationException(String.format("ZrpcServer:%d", serverProperties.getPort()), e);
         }
@@ -87,7 +85,7 @@ public class ZrpcServer implements ApplicationRunner {
     public void destroy(){
         try {
             if (stop.compareAndSet(false, true)) {
-                registrar.signOut();
+                registrar.unRegister();
                 // 优雅停机
                 if (channel != null) {
                     channel.channel().close().sync();
@@ -105,22 +103,9 @@ public class ZrpcServer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        if (serverProperties.getRegistry() == null || serverProperties.getRegistry().getRegistryType() == null) {
-            registrar = new DirectRegistrar();
-        } else {
-            switch (serverProperties.getRegistry().getRegistryType()) {
-                case ZOOKEEPER:
-                    registrar = new ZooKeeperRegistrar(serverProperties.getRegistry());
-                    break;
-                default:
-                    throw new IllegalArgumentException(String.format("registryType:%s not implement",
-                            serverProperties.getRegistry().getRegistryType()));
-            }
-        }
-
         //注册
         ServerInfo serverInfo = new ServerInfo(IPUtils.getIp(), serverProperties.getPort());
-        registrar.signIn(serverInfo);
+        registrar.register(serverProperties.getServerName(), serverInfo);
     }
 
 }

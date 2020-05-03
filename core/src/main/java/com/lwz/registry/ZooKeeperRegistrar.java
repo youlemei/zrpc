@@ -4,22 +4,23 @@ import com.alibaba.fastjson.JSON;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.AddWatchMode;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -32,9 +33,9 @@ public class ZooKeeperRegistrar implements Registrar {
 
     private ZooKeeper zooKeeper;
 
-    private Consumer<List<ServerInfo>> listener;
+    private ConcurrentMap<String, Consumer<List<ServerInfo>>> listenerMap = new ConcurrentHashMap<>();
 
-    private Runnable signIn;
+    private Runnable registerTask;
 
     private SingleThreadEventExecutor zookeeperExecutor = new DefaultEventExecutor();
 
@@ -56,12 +57,8 @@ public class ZooKeeperRegistrar implements Registrar {
 
     private void initZookeeper(Runnable task) {
         try {
-            if (zooKeeper != null) {
-                zooKeeper.close();
-            }
-
             zooKeeper = new ZooKeeper(registryProperties.getRegistryUrl(), zookeeperSessionTimeout, event -> {
-                log.info("zookeeper event:{}", event);
+                log.debug("zookeeper event:{}", event);
                 switch (event.getState()) {
                     case SyncConnected:
                         log.info("ZooKeeper SyncConnected. {}", registryProperties.getRegistryUrl());
@@ -71,11 +68,16 @@ public class ZooKeeperRegistrar implements Registrar {
                         log.info("ZooKeeper Expired. {}", registryProperties.getRegistryUrl());
                         //重新连接,重新注册watch
                         zookeeperExecutor.execute(() -> {
+                            try {
+                                zooKeeper.close();
+                            } catch (InterruptedException e) {
+                                //ignore
+                            }
                             initZookeeper(() -> {
-                                if (signIn != null) {
-                                    signIn.run();
+                                if (registerTask != null) {
+                                    registerTask.run();
                                 }
-                                setListener(listener);
+                                listenerMap.keySet().forEach(serverName -> getServerChildren(zooKeeper, serverName));
                             });
                         });
                         break;
@@ -88,70 +90,67 @@ public class ZooKeeperRegistrar implements Registrar {
     }
 
     @Override
-    public void setListener(Consumer<List<ServerInfo>> listener) {
-        if (listener != null) {
-            this.listener = listener;
-            String path = registryProperties.getRootPath() + "/" + registryProperties.getServerName();
-            getServerChildren(path, zooKeeper);
-            addWatch(path);
+    public void addListener(String serverName, Consumer<List<ServerInfo>> listener) {
+        if (listenerMap.putIfAbsent(serverName, listener) == null) {
+            getServerChildren(zooKeeper, serverName);
         }
     }
 
-    private void addWatch(String path) {
-        ZooKeeper zooKeeper = this.zooKeeper;
-        try {
-            zooKeeper.addWatch(path, event -> getServerChildren(path, zooKeeper), AddWatchMode.PERSISTENT_RECURSIVE);
-        } catch (Exception e) {
-            log.error("initWatch fail. server:{} err:{}", path, e.getMessage());
-            zookeeperExecutor.schedule(() -> {
-                if (this.zooKeeper == zooKeeper) {
-                    addWatch(path);
-                }
-            }, addZookeeperWatchTimeout.getSeconds(), TimeUnit.SECONDS);
-        }
-    }
-
-    private void getServerChildren(String path, ZooKeeper zooKeeper) {
-        this.zooKeeper.getChildren(path, false, (int rc, String p, Object ctx, List<String> children, Stat stat) -> {
-            if (this.zooKeeper == zooKeeper) {
-                Code code = Code.get(rc);
-                log.info("serverInfo:{} code:{} serverChildren:{}", p, code, children);
-                if (Code.OK == code) {
-                    zookeeperExecutor.execute(() -> getChildrenData(path, Optional.ofNullable(children).orElse(Collections.emptyList())));
-                }
-            }
-        }, this);
-    }
-
-    private void getChildrenData(String path, List<String> children) {
-        CountDownLatch countDownLatch = new CountDownLatch(children.size());
-        List<ServerInfo> serverInfos = new CopyOnWriteArrayList<>();
-        children.forEach(child -> {
-            zooKeeper.getData(path + "/" + child, false, (int rc, String p, Object ctx, byte[] data, Stat stat) -> {
-                try {
+    private void getServerChildren(ZooKeeper zooKeeper, String serverName) {
+        String serverPath = registryProperties.getRootPath() + "/" + serverName;
+        this.zooKeeper.getChildren(serverPath, event -> getServerChildren(zooKeeper, serverName),
+                (int rc, String p, Object ctx, List<String> children, Stat stat) -> {
                     Code code = Code.get(rc);
-                    String text = new String(data);
-                    log.info("serverInfo:{} code:{} data:{}", p, code, text);
-                    if (Code.OK == code) {
-                        serverInfos.add(JSON.parseObject(text, ServerInfo.class));
+                    if (Code.OK == code && this.zooKeeper == zooKeeper) {
+                        log.info("serverInfo:{} code:{} serverChildren:{}", p, code, children);
+                        zookeeperExecutor.execute(() -> getChildrenData(serverPath, children, zooKeeper, serverName));
+                    } else {
+                        log.info("serverInfo:{} code:{} discard.", p, code);
                     }
-                } finally {
-                    countDownLatch.countDown();
-                }
-            }, this);
-        });
-        try {
-            countDownLatch.await();
-            listener.accept(serverInfos);
-        } catch (InterruptedException e) {
-            //ignore
+                }, this);
+    }
+
+    private void getChildrenData(String serverPath, List<String> children, ZooKeeper zooKeeper, String serverName) {
+        AtomicBoolean update = new AtomicBoolean(true);
+        List<ServerInfo> serverInfos = new CopyOnWriteArrayList<>();
+        if (!CollectionUtils.isEmpty(children)) {
+            CountDownLatch countDownLatch = new CountDownLatch(children.size());
+            children.forEach(child -> {
+                this.zooKeeper.getData(serverPath + "/" + child, false, (int rc, String p, Object ctx, byte[] data, Stat stat) -> {
+                    try {
+                        Code code = Code.get(rc);
+                        if (Code.OK == code && this.zooKeeper == zooKeeper) {
+                            String text = new String(data);
+                            log.info("serverInfo:{} code:{} data:{}", p, code, text);
+                            serverInfos.add(JSON.parseObject(text, ServerInfo.class));
+                        } else {
+                            log.info("serverInfo:{} code:{} discard.", p, code);
+                            update.set(false);
+                        }
+                    } finally {
+                        countDownLatch.countDown();
+                    }
+                }, this);
+            });
+            try {
+                countDownLatch.await();
+            } catch (InterruptedException e) {
+                //ignore
+            }
+        }
+        if (update.get()) {
+            Consumer<List<ServerInfo>> listener = listenerMap.get(serverName);
+            if (listener != null) {
+                listener.accept(serverInfos);
+            }
         }
     }
 
     @Override
-    public void signIn(ServerInfo serverInfo) {
-        String path = registryProperties.getRootPath() + "/" + registryProperties.getServerName() + "/" + UUID.randomUUID();
-        createServerNode(path, 0, serverInfo);
+    public void register(String serverName, ServerInfo serverInfo) {
+        String path = registryProperties.getRootPath() + "/" + serverName + "/" + UUID.randomUUID();
+        registerTask = () -> createServerNode(path, 0, serverInfo);
+        registerTask.run();
     }
 
     private void createServerNode(String path, int offset, ServerInfo serverInfo) {
@@ -161,33 +160,28 @@ public class ZooKeeperRegistrar implements Registrar {
             zooKeeper.create(parent, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT,
                     (int rc, String p, Object ctx, String name, Stat stat) -> {
                         Code code = Code.get(rc);
-                        log.info("createParent code:{} node:{}", code, p);
+                        log.debug("createParent code:{} node:{}", code, p);
                         createServerNode(path, index, serverInfo);
                     }, this);
         } else {
-            Runnable signIn = () -> {
-                byte[] data = JSON.toJSONString(serverInfo).getBytes();
-                zooKeeper.create(path, data, Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL,
-                        (int rc, String p, Object ctx, String name, Stat stat) -> {
-                            Code code = Code.get(rc);
-                            switch (code) {
-                                case OK:
-                                case NODEEXISTS:
-                                    log.info("signIn success. zookeeper:{} node:{}", registryProperties.getRegistryUrl(), path);
-                                    break;
-                                default:
-                                    log.error("signIn fail. zookeeper:{} code:{} node:{}", registryProperties.getRegistryUrl(), code, path);
-                                    break;
-                            }
-                        }, this);
-            };
-            this.signIn = signIn;
-            signIn.run();
+            byte[] data = JSON.toJSONString(serverInfo).getBytes();
+            zooKeeper.create(path, data, Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL, (int rc, String p, Object ctx, String name, Stat stat) -> {
+                Code code = Code.get(rc);
+                switch (code) {
+                    case OK:
+                    case NODEEXISTS:
+                        log.info("register success. zookeeper:{} node:{}", registryProperties.getRegistryUrl(), path);
+                        break;
+                    default:
+                        log.error("register fail. zookeeper:{} code:{} node:{}", registryProperties.getRegistryUrl(), code, path);
+                        break;
+                }
+            }, this);
         }
     }
 
     @Override
-    public void signOut() {
+    public void unRegister() {
         try {
             if (zooKeeper != null) {
                 zooKeeper.close();

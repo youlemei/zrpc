@@ -1,6 +1,5 @@
 package com.lwz.server;
 
-import com.lwz.registry.RegistryProperties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -14,13 +13,21 @@ public class ServerProperties {
     /**
      * 服务端口
      */
-    private int port;
+    private int port = 7320;
 
     /**
-     * SO_TIMEOUT
+     * 默认超时
      */
     private int timeout;
 
-    private RegistryProperties registry;
+    /**
+     * 服务名, 必填
+     */
+    private String serverName;
+
+    /**
+     * 服务密钥, 注册使用
+     */
+    private String serverKey;
 
 }

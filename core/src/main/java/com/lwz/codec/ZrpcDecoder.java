@@ -1,8 +1,8 @@
 package com.lwz.codec;
 
 import com.lwz.message.Header;
-import com.lwz.message.ZrpcDecodeObj;
-import com.lwz.message.ZrpcEncodeObj;
+import com.lwz.message.DecodeObj;
+import com.lwz.message.EncodeObj;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -36,15 +36,15 @@ public class ZrpcDecoder extends ByteToMessageDecoder {
             }
 
             ByteBuf headerBuf = in.slice(in.readerIndex(), Header.HEADER_LENGTH);
-            Header header = Codecs.read(headerBuf, Header.class);
+            Header header = ZrpcCodecs.read(headerBuf, Header.class);
             int length = header.getLength();
             if (length > MAX_MESSAGE_LENGTH) {
                 log.warn("decode err. body length > {}, close channel.", MAX_MESSAGE_LENGTH);
                 ctx.channel().close();
                 return;
             }
-            if (header.getVersion() != Codecs.VERSION) {
-                log.warn("decode err. version expect:{} but:{}, close channel.", Codecs.VERSION, header.getVersion());
+            if (header.getVersion() != ZrpcCodecs.VERSION) {
+                log.warn("decode err. version expect:{} but:{}, close channel.", ZrpcCodecs.VERSION, header.getVersion());
                 ctx.channel().close();
                 return;
             }
@@ -59,13 +59,13 @@ public class ZrpcDecoder extends ByteToMessageDecoder {
 
             if (header.isPing()) {
                 header.setExt(Header.PONG);
-                ZrpcEncodeObj message = new ZrpcEncodeObj();
-                message.setHeader(header);
-                ctx.channel().writeAndFlush(message);
+                EncodeObj encodeObj = new EncodeObj();
+                encodeObj.setHeader(header);
+                ctx.channel().writeAndFlush(encodeObj);
                 return;
             }
 
-            ZrpcDecodeObj message = new ZrpcDecodeObj();
+            DecodeObj message = new DecodeObj();
             message.setHeader(header);
             message.setBody(messageBuf);
             out.add(message);

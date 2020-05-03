@@ -2,8 +2,8 @@ package com.lwz.server;
 
 import com.lwz.message.ErrMessage;
 import com.lwz.message.Header;
-import com.lwz.message.ZrpcDecodeObj;
-import com.lwz.message.ZrpcEncodeObj;
+import com.lwz.message.DecodeObj;
+import com.lwz.message.EncodeObj;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -20,7 +20,7 @@ import java.lang.reflect.Type;
  */
 @Slf4j
 @ChannelHandler.Sharable
-public class DispatcherHandler extends SimpleChannelInboundHandler<ZrpcDecodeObj> {
+public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
 
     private HandlerRegistrar handlerRegistrar;
 
@@ -29,7 +29,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZrpcDecodeObj
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ZrpcDecodeObj msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, DecodeObj msg) throws Exception {
 
         //TODO: 调用链 请求信息(ip/port/header) ThreadLocal
 
@@ -61,7 +61,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZrpcDecodeObj
 
     }
 
-    private void responseErr(ChannelHandlerContext ctx, ZrpcDecodeObj msg, Throwable e) {
+    private void responseErr(ChannelHandlerContext ctx, DecodeObj msg, Throwable e) {
 
         ErrMessage errMessage = new ErrMessage();
         errMessage.setMessage(e.getMessage());
@@ -75,7 +75,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZrpcDecodeObj
             errMessage.setMessage("500. Server Error");
         }
 
-        ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+        EncodeObj encodeObj = new EncodeObj();
         Header header = msg.getHeader();
         header.setExt(Header.EXCEPTION);
         encodeObj.setHeader(header);

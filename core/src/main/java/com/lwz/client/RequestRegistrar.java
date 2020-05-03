@@ -2,6 +2,7 @@ package com.lwz.client;
 
 import com.lwz.annotation.Client;
 import com.lwz.annotation.ClientScan;
+import com.lwz.client.pool.ClientFallback;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -16,6 +17,7 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.StringUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,11 +34,17 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar, BeanFact
         Map<String, Object> clientScan = importingClassMetadata.getAnnotationAttributes(ClientScan.class.getName());
         String[] clientPackages = (String[]) clientScan.get("value");
         ClientScanner scanner = new ClientScanner();
+        Map<String, Class> serverNameMap = new HashMap<>();
         for (String clientPackage : clientPackages) {
             Set<BeanDefinition> clientDefinitionSet = scanner.findCandidateComponents(clientPackage);
             for (BeanDefinition clientDefinition : clientDefinitionSet) {
                 try {
                     Class<?> clientInterface = Class.forName(clientDefinition.getBeanClassName());
+                    Client client = clientInterface.getAnnotation(Client.class);
+                    Class another = serverNameMap.put(client.value(), clientInterface);
+                    if (another != null) {
+                        throw new IllegalArgumentException(String.format("client repeat! they are: [%s] [%s]", another, clientInterface));
+                    }
                     GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
                     beanDefinition.setBeanClass(ClientFactoryBean.class);
                     beanDefinition.getPropertyValues().add("clientInterface", clientInterface);
@@ -52,6 +60,7 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar, BeanFact
 
     private Object getFallback(Class<?> clientInterface) {
         try {
+            //能取到Component/Configuration定义的Bean, 取不到EnableAutoConfiguration定义的Bean
             Object fallback = beanFactory.getBean(clientInterface);
             return fallback instanceof ClientFallback ? fallback : null;
         } catch (Exception e) {

@@ -1,7 +1,7 @@
 package com.lwz.client;
 
 import com.lwz.annotation.Request;
-import com.lwz.codec.Codecs;
+import com.lwz.codec.ZrpcCodecs;
 import lombok.Data;
 
 import java.lang.reflect.Method;
@@ -55,9 +55,9 @@ public class MethodMetadata {
         //check
         try {
             for (Type type : argsTypes) {
-                Codecs.length(type, null);
+                ZrpcCodecs.length(type, null);
             }
-            Codecs.length(returnType, null);
+            ZrpcCodecs.length(returnType, null);
         } catch (Exception e) {
             throw new IllegalArgumentException("func check fail.", e);
         }

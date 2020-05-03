@@ -7,7 +7,7 @@ import lombok.Data;
  * @author liweizhou 2020/5/2
  */
 @Data
-public class ZrpcDecodeObj {
+public class DecodeObj {
 
     private Header header;
 

@@ -1,4 +1,4 @@
-package com.lwz.server;
+package com.lwz.server.handler;
 
 import com.lwz.annotation.Handler;
 import com.lwz.annotation.Server;

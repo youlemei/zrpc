@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  *
  * @author liweizhou 2020/5/2
  */
-public class Codecs {
+public class ZrpcCodecs {
 
     public static final String CHARSET = "UTF-8";
 

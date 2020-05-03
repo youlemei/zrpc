@@ -1,11 +1,10 @@
 package com.lwz.client.pool;
 
-import com.lwz.client.ClientProperties;
+import com.lwz.annotation.Client;
+import com.lwz.client.ClientConfig;
 import com.lwz.client.ZrpcClient;
-import com.lwz.registry.DirectRegistrar;
 import com.lwz.registry.Registrar;
 import com.lwz.registry.ServerInfo;
-import com.lwz.registry.ZooKeeperRegistrar;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
@@ -20,12 +19,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
+ * 一个服务器一个连接池, 方便进行负载均衡/服务升级剔除/熔断降级
+ *
  * @author liweizhou 2020/4/27
  */
 @Slf4j
 public class ClientManager {
 
-    private ClientProperties clientProperties;
+    private ClientConfig clientConfig;
 
     private Class<?> clientInterface;
 
@@ -37,28 +38,17 @@ public class ClientManager {
 
     private AtomicBoolean stop = new AtomicBoolean(false);
 
-    public ClientManager(ClientProperties clientProperties, Class<?> clientInterface) {
-        this.clientProperties = clientProperties;
+    public ClientManager(ClientConfig clientConfig, Registrar registrar, Class<?> clientInterface) {
+        this.clientConfig = clientConfig;
+        this.registrar = registrar;
         this.clientInterface = clientInterface;
         initRegistrar();
     }
 
     private void initRegistrar() {
-        if (clientProperties.getRegistry() == null || clientProperties.getRegistry().getRegistryType() == null) {
-            registrar = new DirectRegistrar(clientProperties.getNodes());
-        } else {
-            switch (clientProperties.getRegistry().getRegistryType()) {
-                case ZOOKEEPER:
-                    registrar = new ZooKeeperRegistrar(clientProperties.getRegistry());
-                    break;
-                default:
-                    throw new IllegalArgumentException(String.format("registryType:%s not implement",
-                            clientProperties.getRegistry().getRegistryType()));
-            }
-        }
-
         registrarInit = new CountDownLatch(1);
-        registrar.setListener(serverInfos -> {
+        Client client = clientInterface.getAnnotation(Client.class);
+        registrar.addListener(client.value(), serverInfos -> {
             if (stop.get()) {
                 return;
             }
@@ -66,7 +56,7 @@ public class ClientManager {
             List<ClientPool> oldClientPools = this.clientPoolList;
             List<ClientPool> newClientPools = serverInfos.stream()
                     .map(serverInfo -> Optional.ofNullable(findByServerInfo(oldClientPools, serverInfo))
-                            .orElse(new ClientPool(this, serverInfo, clientProperties)))
+                            .orElse(new ClientPool(this, serverInfo, clientConfig)))
                     .collect(Collectors.toList());
             this.clientPoolList = newClientPools;
             registrarInit.countDown();
@@ -92,7 +82,7 @@ public class ClientManager {
         //服务器升级-暂时不可用, 应采取nginx的暂时摘除策略, Socket异常销毁链接, 暂时摘除, n秒后重试
         List<ClientPool> clientPools = clientPoolList.stream().filter(ClientPool::isAvailable).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(clientPools)) {
-            throw new NoSuchElementException(String.format("no available server:%s", clientInterface.getName()));
+            throw new NoSuchElementException(String.format("no available server: %s", clientInterface.getName()));
         }
         return clientPools;
     }
@@ -114,7 +104,6 @@ public class ClientManager {
         if (stop.compareAndSet(false, true)) {
             List<ClientPool> clientPools = this.clientPoolList;
             clientPools.parallelStream().forEach(ClientPool::close);
-            registrar.signOut();
         }
     }
 

@@ -2,7 +2,7 @@ package com.lwz.message;
 
 import com.lwz.annotation.Field;
 import com.lwz.annotation.Message;
-import com.lwz.codec.Codecs;
+import com.lwz.codec.ZrpcCodecs;
 import lombok.Data;
 
 /**
@@ -34,7 +34,7 @@ public class Header {
      * 版本
      */
     @Field(4)
-    private short version = Codecs.VERSION;
+    private short version = ZrpcCodecs.VERSION;
 
     /**
      * 拓展: ping/pong/exception/json

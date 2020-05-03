@@ -1,4 +1,4 @@
-package com.lwz.client;
+package com.lwz.client.client;
 
 import com.lwz.client.message.HelloRequest;
 import com.lwz.client.message.HelloResponse;
@@ -15,7 +15,7 @@ import java.util.concurrent.Future;
  */
 @Slf4j
 @Component
-public class ClientService {
+public class HelloClientTest {
 
     @Autowired
     private HelloClient helloClient;
@@ -24,6 +24,10 @@ public class ClientService {
     public void run() throws Exception {
         //runHello();
 
+        hello2();
+    }
+
+    private void hello2() {
         HelloRequest helloRequest = new HelloRequest();
         helloRequest.setHost("lwz");
         helloRequest.setPort(7777);

@@ -8,10 +8,10 @@ import java.util.function.Consumer;
  */
 public interface Registrar {
 
-    void setListener(Consumer<List<ServerInfo>> listener);
+    void addListener(String serverName, Consumer<List<ServerInfo>> listener);
 
-    default void signIn(ServerInfo serverInfo){}
+    default void register(String serverName, ServerInfo serverInfo){}
 
-    default void signOut(){}
+    default void unRegister(){}
 
 }

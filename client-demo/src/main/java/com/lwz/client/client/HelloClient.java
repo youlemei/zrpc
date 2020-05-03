@@ -1,4 +1,4 @@
-package com.lwz.client;
+package com.lwz.client.client;
 
 import com.lwz.annotation.Client;
 import com.lwz.annotation.Request;

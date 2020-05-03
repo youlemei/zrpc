@@ -46,7 +46,7 @@ public class HandlerRegistrar implements BeanPostProcessor {
             if (handlerInvoker != null) {
                 String first = handlerInvoker.getBean().getClass().getSimpleName() + "." + handlerInvoker.getMethod().getName();
                 String second = bean.getClass().getSimpleName() + "." + method.getName();
-                throw new RuntimeException(String.format("handler repeat! they are: [%s] [%s]", first, second));
+                throw new IllegalArgumentException(String.format("handler repeat! they are: [%s] [%s]", first, second));
             }
             return new HandlerInvoker(uri, bean, method);
         });

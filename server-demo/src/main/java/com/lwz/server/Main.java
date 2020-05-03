@@ -1,15 +1,11 @@
-package com.lwz;
+package com.lwz.server;
 
-import com.lwz.annotation.ClientScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * @author liweizhou 2020/4/13
+ * @author liweizhou 2020/4/12
  */
-@EnableScheduling
-@ClientScan("com.lwz.client")
 @SpringBootApplication
 public class Main {
 

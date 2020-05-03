@@ -1,9 +1,9 @@
 package com.lwz.server;
 
-import com.lwz.codec.Codecs;
+import com.lwz.codec.ZrpcCodecs;
 import com.lwz.filter.Filter;
-import com.lwz.message.ZrpcDecodeObj;
-import com.lwz.message.ZrpcEncodeObj;
+import com.lwz.message.DecodeObj;
+import com.lwz.message.EncodeObj;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -42,17 +42,17 @@ public class HandlerInvoker {
         //check
         try {
             for (Type type : paramTypes) {
-                Codecs.length(type, null);
+                ZrpcCodecs.length(type, null);
             }
             for (Type type : returnTypes) {
-                Codecs.length(type, null);
+                ZrpcCodecs.length(type, null);
             }
         } catch (Exception e) {
             throw new IllegalArgumentException("func check fail.", e);
         }
     }
 
-    public boolean applyPreHandle(ChannelHandlerContext ctx, ZrpcDecodeObj msg) {
+    public boolean applyPreHandle(ChannelHandlerContext ctx, DecodeObj msg) {
         for (Filter filter : filters) {
             if (!filter.preHandle(ctx, msg)) {
                 return false;
@@ -61,28 +61,28 @@ public class HandlerInvoker {
         return true;
     }
 
-    public void applyPostHandle(ChannelHandlerContext ctx, ZrpcDecodeObj msg) {
+    public void applyPostHandle(ChannelHandlerContext ctx, DecodeObj msg) {
         for (Filter filter : filters) {
             filter.postHandle(ctx, msg);
         }
     }
 
-    public void handle(ChannelHandlerContext ctx, ZrpcDecodeObj msg) throws Exception {
+    public void handle(ChannelHandlerContext ctx, DecodeObj msg) throws Exception {
         //拼参, 调用, 返回
         Object[] args = getMethodArgs(msg);
         Object result = method.invoke(bean, args);
-        ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+        EncodeObj encodeObj = new EncodeObj();
         encodeObj.setHeader(msg.getHeader());
         encodeObj.setBodys(new Object[]{result});
         encodeObj.setBodyTypes(returnTypes);
         ctx.channel().writeAndFlush(encodeObj);
     }
 
-    private Object[] getMethodArgs(ZrpcDecodeObj msg) throws Exception {
+    private Object[] getMethodArgs(DecodeObj msg) throws Exception {
         ByteBuf bodyBuf = msg.getBody();
         Object[] args = new Object[paramTypes.length];
         for (int i = 0; i < paramTypes.length; i++) {
-            Object arg = Codecs.read(bodyBuf, paramTypes[i]);
+            Object arg = ZrpcCodecs.read(bodyBuf, paramTypes[i]);
             args[i] = arg;
         }
         //if (bodyBuf.readableBytes() != 0) {

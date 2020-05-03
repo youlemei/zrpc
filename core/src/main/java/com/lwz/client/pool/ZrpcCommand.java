@@ -1,12 +1,10 @@
 package com.lwz.client.pool;
 
-import com.lwz.client.ClientFallback;
-import com.lwz.client.FallbackContext;
 import com.lwz.client.MethodMetadata;
 import com.lwz.client.ResponseFuture;
 import com.lwz.client.ZrpcClient;
 import com.lwz.message.Header;
-import com.lwz.message.ZrpcEncodeObj;
+import com.lwz.message.EncodeObj;
 import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
@@ -50,7 +48,7 @@ public class ZrpcCommand extends HystrixCommand {
         ZrpcClient zrpcClient = null;
         ResponseFuture responseFuture;
         try {
-            ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+            EncodeObj encodeObj = new EncodeObj();
             Header header = new Header();
             header.setUri(methodMetadata.getRequest().value());
             encodeObj.setHeader(header);
