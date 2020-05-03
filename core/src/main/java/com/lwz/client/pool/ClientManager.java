@@ -9,8 +9,11 @@ import com.lwz.registry.ZooKeeperRegistrar;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,6 +27,8 @@ public class ClientManager {
 
     private ClientProperties clientProperties;
 
+    private Class<?> clientInterface;
+
     private Registrar registrar;
 
     private CountDownLatch registrarInit;
@@ -32,8 +37,9 @@ public class ClientManager {
 
     private AtomicBoolean stop = new AtomicBoolean(false);
 
-    public ClientManager(ClientProperties clientProperties) {
+    public ClientManager(ClientProperties clientProperties, Class<?> clientInterface) {
         this.clientProperties = clientProperties;
+        this.clientInterface = clientInterface;
         initRegistrar();
     }
 
@@ -53,17 +59,18 @@ public class ClientManager {
 
         registrarInit = new CountDownLatch(1);
         registrar.setListener(serverInfos -> {
+            if (stop.get()) {
+                return;
+            }
             //暂不考虑serverInfo重复问题
             List<ClientPool> oldClientPools = this.clientPoolList;
-            List<ClientPool> newClientPools = serverInfos.stream().map(serverInfo ->
-                    Optional.ofNullable(findByServerInfo(oldClientPools, serverInfo))
-                            .orElse(new ClientPool(this, serverInfo, clientProperties))
-            ).collect(Collectors.toList());
-            List<ClientPool> toClosePool = oldClientPools.stream()
-                    .filter(clientPool -> !newClientPools.contains(clientPool)).collect(Collectors.toList());
+            List<ClientPool> newClientPools = serverInfos.stream()
+                    .map(serverInfo -> Optional.ofNullable(findByServerInfo(oldClientPools, serverInfo))
+                            .orElse(new ClientPool(this, serverInfo, clientProperties)))
+                    .collect(Collectors.toList());
             this.clientPoolList = newClientPools;
             registrarInit.countDown();
-            toClosePool.parallelStream().forEach(ClientPool::close);
+            oldClientPools.stream().filter(clientPool -> !newClientPools.contains(clientPool)).parallel().forEach(ClientPool::close);
         });
     }
 
@@ -72,14 +79,7 @@ public class ClientManager {
         //调用时间加入权重
         int index = ThreadLocalRandom.current().nextInt(clientPools.size());
         ClientPool clientPool = clientPools.get(index);
-        try {
-            return clientPool.borrowObject();
-        } catch (Exception e) {
-            if (e instanceof IOException) {
-                clientPool.disable();
-            }
-            throw e;
-        }
+        return clientPool.borrowObject();
     }
 
     private List<ClientPool> checkForBorrow() {
@@ -92,7 +92,7 @@ public class ClientManager {
         //服务器升级-暂时不可用, 应采取nginx的暂时摘除策略, Socket异常销毁链接, 暂时摘除, n秒后重试
         List<ClientPool> clientPools = clientPoolList.stream().filter(ClientPool::isAvailable).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(clientPools)) {
-            throw new NoSuchElementException("no available server");
+            throw new NoSuchElementException(String.format("no available server:%s", clientInterface.getName()));
         }
         return clientPools;
     }
@@ -114,13 +114,12 @@ public class ClientManager {
         if (stop.compareAndSet(false, true)) {
             List<ClientPool> clientPools = this.clientPoolList;
             clientPools.parallelStream().forEach(ClientPool::close);
-            //registrar.signOut();
+            registrar.signOut();
         }
     }
 
     private ClientPool findByServerInfo(List<ClientPool> oldClientPools, ServerInfo serverInfo) {
-        for (int i = 0; i < oldClientPools.size(); i++) {
-            ClientPool clientPool = oldClientPools.get(i);
+        for (ClientPool clientPool : oldClientPools) {
             if (Objects.equals(clientPool.getServerInfo(), serverInfo)) {
                 return clientPool;
             }

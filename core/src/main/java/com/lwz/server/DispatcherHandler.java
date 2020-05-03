@@ -1,20 +1,26 @@
 package com.lwz.server;
 
-import com.lwz.message.ZZPMessage;
+import com.lwz.message.ErrMessage;
+import com.lwz.message.Header;
+import com.lwz.message.ZrpcDecodeObj;
+import com.lwz.message.ZrpcEncodeObj;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.EncoderException;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 
 /**
  * @author liweizhou 2020/4/5
  */
 @Slf4j
 @ChannelHandler.Sharable
-public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
+public class DispatcherHandler extends SimpleChannelInboundHandler<ZrpcDecodeObj> {
 
     private HandlerRegistrar handlerRegistrar;
 
@@ -23,16 +29,16 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ZZPMessage msg) throws Exception {
-        HandlerInvoker handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
-        if (handler == null) {
-            //err404
-
-        }
+    protected void channelRead0(ChannelHandlerContext ctx, ZrpcDecodeObj msg) throws Exception {
 
         //TODO: 调用链 请求信息(ip/port/header) ThreadLocal
 
         try {
+            HandlerInvoker handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
+            if (handler == null) {
+                //err404
+                throw new HandlerException("404. Handler Not Found");
+            }
             if (!handler.applyPreHandle(ctx, msg)) {
                 return;
             }
@@ -44,7 +50,8 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
 
         } catch (Throwable e) {
             //responseErr();
-            log.error("channelRead0 fail. header:{} err:{}", msg.getHeader(), e.getMessage(), e);
+            log.warn("handle fail. header:{} err:{}", msg.getHeader(), e.getMessage(), e);
+            responseErr(ctx, msg, e);
 
         } finally {
 
@@ -52,6 +59,29 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<ZZPMessage> {
             ReferenceCountUtil.release(msg.getBody());
         }
 
+    }
+
+    private void responseErr(ChannelHandlerContext ctx, ZrpcDecodeObj msg, Throwable e) {
+
+        ErrMessage errMessage = new ErrMessage();
+        errMessage.setMessage(e.getMessage());
+        errMessage.setException(e.getClass().getName());
+
+        //处理器
+        if (e instanceof DecoderException) {
+            errMessage.setMessage("400. Bad Request");
+        }
+        if (e instanceof EncoderException) {
+            errMessage.setMessage("500. Server Error");
+        }
+
+        ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+        Header header = msg.getHeader();
+        header.setExt(Header.EXCEPTION);
+        encodeObj.setHeader(header);
+        encodeObj.setBodys(new Object[]{errMessage});
+        encodeObj.setBodyTypes(new Type[]{ErrMessage.class});
+        ctx.channel().writeAndFlush(encodeObj);
     }
 
     @Override

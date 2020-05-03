@@ -12,8 +12,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
@@ -23,11 +21,8 @@ public class Messager {
 
     public static final short VERSION = 1;
 
-    public static final ConcurrentMap<Integer, Class> URI_CLASS_MAP = new ConcurrentHashMap<>();
-
     /**
      * 解包
-     * TODO: Type
      *
      * @param byteBuf
      * @param clz
@@ -35,28 +30,26 @@ public class Messager {
      * @return
      */
     public static <T> T read(ByteBuf byteBuf, Class<T> clz) {
-        if (clz == null) {
-            return null;
-        }
         try {
+            Assert.notNull(clz, "'clz' must not be null");
             Object ret = readSimple(byteBuf, clz);
-            if (ret == null) {
-                Message message = clz.getAnnotation(Message.class);
-                Assert.notNull(message, String.format("%s must has annotation: @Message", clz.getSimpleName()));
-                T instance = clz.newInstance();
-                Field[] fields = clz.getDeclaredFields();
-                List<Field> instanceFields = Arrays.stream(fields)
-                        .filter(field -> !Modifier.isStatic(field.getModifiers()) && field.getAnnotation(com.lwz.annotation.Field.class) != null)
-                        .sorted(Comparator.comparingInt(o -> o.getAnnotation(com.lwz.annotation.Field.class).value()))
-                        .map(field -> {field.setAccessible(true);return field;})
-                        .collect(Collectors.toList());
-                for (Field field : instanceFields) {
-                    Object value = read(byteBuf, field.getType());
-                    field.set(instance, value);
-                }
-                return instance;
+            if (ret != null) {
+                return (T) ret;
             }
-            return (T) ret;
+            Message message = clz.getAnnotation(Message.class);
+            Assert.notNull(message, String.format("%s must has annotation: @Message", clz.getSimpleName()));
+            T instance = clz.newInstance();
+            Field[] fields = clz.getDeclaredFields();
+            List<Field> instanceFields = Arrays.stream(fields)
+                    .filter(field -> !Modifier.isStatic(field.getModifiers()) && field.getAnnotation(com.lwz.annotation.Field.class) != null)
+                    .sorted(Comparator.comparingInt(o -> o.getAnnotation(com.lwz.annotation.Field.class).value()))
+                    .map(field -> {field.setAccessible(true);return field;})
+                    .collect(Collectors.toList());
+            for (Field field : instanceFields) {
+                Object value = read(byteBuf, field.getType());
+                field.set(instance, value);
+            }
+            return instance;
         } catch (Exception e) {
             throw new DecoderException(e);
         }
@@ -109,7 +102,6 @@ public class Messager {
 
     /**
      * 打包
-     * TODO: Type
      *
      * @param byteBuf
      * @param data

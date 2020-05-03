@@ -2,7 +2,7 @@ package com.lwz.message;
 
 import com.lwz.annotation.Field;
 import com.lwz.annotation.Message;
-import com.lwz.codec.Messager;
+import com.lwz.codec.Codecs;
 import lombok.Data;
 
 /**
@@ -10,7 +10,7 @@ import lombok.Data;
  */
 @Data
 @Message
-public class ZZPHeader {
+public class Header {
 
     /**
      * 请求uri
@@ -34,7 +34,7 @@ public class ZZPHeader {
      * 版本
      */
     @Field(4)
-    private short version = Messager.VERSION;
+    private short version = Codecs.VERSION;
 
     /**
      * 拓展: ping/pong/exception/json
@@ -51,5 +51,21 @@ public class ZZPHeader {
     public static final short EXCEPTION = 4;
 
     public static final short JSON = 8;
+
+    public boolean isPing() {
+        return (ext & Header.PING) > 0;
+    }
+
+    public boolean isPong() {
+        return (ext & Header.PONG) > 0;
+    }
+
+    public boolean isException() {
+        return (ext & Header.EXCEPTION) > 0;
+    }
+
+    public boolean isJson() {
+        return (ext & Header.JSON) > 0;
+    }
 
 }

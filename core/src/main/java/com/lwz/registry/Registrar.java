@@ -10,7 +10,7 @@ public interface Registrar {
 
     void setListener(Consumer<List<ServerInfo>> listener);
 
-    default void signIn(ServerInfo serverInfo, String uuid){}
+    default void signIn(ServerInfo serverInfo){}
 
     default void signOut(){}
 

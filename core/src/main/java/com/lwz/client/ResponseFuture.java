@@ -10,6 +10,8 @@ import java.util.concurrent.Future;
  */
 public interface ResponseFuture<T> extends Future<T> {
 
+    boolean isSuccess();
+
     ResponseFuture<T> onSuccess(SuccessCallback<T> success);
     
     ResponseFuture<T> onFail(FailureCallback fail);

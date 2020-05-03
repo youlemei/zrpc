@@ -5,6 +5,7 @@ import com.lwz.annotation.Request;
 import com.lwz.client.message.HelloRequest;
 import com.lwz.client.message.HelloResponse;
 
+import java.util.List;
 import java.util.concurrent.Future;
 
 /**
@@ -21,5 +22,8 @@ public interface HelloClient {
 
     @Request(1)
     void helloOnly(HelloRequest helloRequest);
+
+    @Request(2)
+    int hello2(HelloRequest helloRequest, List<Long> list, int ret);
 
 }

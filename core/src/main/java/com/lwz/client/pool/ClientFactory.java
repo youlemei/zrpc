@@ -45,7 +45,7 @@ public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
             zrpcClient.ping();
             return true;
         } catch (Exception e) {
-            log.warn("ping fail. {} err:{}", zrpcClient.getServerInfo(), e.getMessage(), e);
+            log.warn("ping fail. {} err:{}", zrpcClient.getServerInfo(), e.getMessage());
             return false;
         }
     }

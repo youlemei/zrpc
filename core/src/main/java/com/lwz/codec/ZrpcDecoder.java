@@ -1,7 +1,8 @@
 package com.lwz.codec;
 
-import com.lwz.message.ZZPHeader;
-import com.lwz.message.ZZPMessage;
+import com.lwz.message.Header;
+import com.lwz.message.ZrpcDecodeObj;
+import com.lwz.message.ZrpcEncodeObj;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -13,7 +14,7 @@ import java.util.List;
  * @author liweizhou 2020/4/5
  */
 @Slf4j
-public class ZZPDecoder extends ByteToMessageDecoder {
+public class ZrpcDecoder extends ByteToMessageDecoder {
 
     public static final int MAX_BYTEBUF_LENGTH = 30 * 1024 * 1024;
 
@@ -29,57 +30,47 @@ public class ZZPDecoder extends ByteToMessageDecoder {
         }
 
         while (true) {
-            if (in.readableBytes() < ZZPHeader.HEADER_LENGTH) {
+            if (in.readableBytes() < Header.HEADER_LENGTH) {
                 //继续等待数据包
                 return;
             }
 
-            ByteBuf headerBuf = in.slice(in.readerIndex(), ZZPHeader.HEADER_LENGTH);
-            ZZPHeader header = Messager.read(headerBuf, ZZPHeader.class);
+            ByteBuf headerBuf = in.slice(in.readerIndex(), Header.HEADER_LENGTH);
+            Header header = Codecs.read(headerBuf, Header.class);
             int length = header.getLength();
             if (length > MAX_MESSAGE_LENGTH) {
                 log.warn("decode err. body length > {}, close channel.", MAX_MESSAGE_LENGTH);
                 ctx.channel().close();
                 return;
             }
-            if (header.getVersion() != Messager.VERSION) {
-                log.warn("decode err. version expect:{} but:{}, close channel.", Messager.VERSION, header.getVersion());
+            if (header.getVersion() != Codecs.VERSION) {
+                log.warn("decode err. version expect:{} but:{}, close channel.", Codecs.VERSION, header.getVersion());
                 ctx.channel().close();
                 return;
             }
-            int messageLength = ZZPHeader.HEADER_LENGTH + length;
+            int messageLength = Header.HEADER_LENGTH + length;
             if (in.readableBytes() < messageLength) {
                 //继续等待数据包
                 return;
             }
 
             ByteBuf messageBuf = in.readBytes(messageLength);
-            messageBuf.readerIndex(ZZPHeader.HEADER_LENGTH);
+            messageBuf.readerIndex(Header.HEADER_LENGTH);
 
-            if (isPing(header.getExt())) {
-                header.setExt(ZZPHeader.PONG);
-                ZZPMessage message = new ZZPMessage();
+            if (header.isPing()) {
+                header.setExt(Header.PONG);
+                ZrpcEncodeObj message = new ZrpcEncodeObj();
                 message.setHeader(header);
                 ctx.channel().writeAndFlush(message);
                 return;
             }
 
-            ZZPMessage message = new ZZPMessage();
+            ZrpcDecodeObj message = new ZrpcDecodeObj();
             message.setHeader(header);
             message.setBody(messageBuf);
             out.add(message);
         }
 
     }
-
-    private boolean isPing(short ext) {
-        return (ext & ZZPHeader.PING) > 0;
-    }
-
-    private boolean isPong(short ext) {
-        return (ext & ZZPHeader.PONG) > 0;
-    }
-
-    //TODO: 解包异常响应
 
 }

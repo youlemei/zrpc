@@ -1,10 +1,10 @@
 package com.lwz.client;
 
 import com.lwz.client.pool.ClientPool;
-import com.lwz.codec.ZZPDecoder;
-import com.lwz.codec.ZZPEncoder;
-import com.lwz.message.ZZPHeader;
-import com.lwz.message.ZZPMessage;
+import com.lwz.codec.ZrpcDecoder;
+import com.lwz.codec.ZrpcEncoder;
+import com.lwz.message.Header;
+import com.lwz.message.ZrpcEncodeObj;
 import com.lwz.registry.ServerInfo;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -14,8 +14,13 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.reflect.Type;
 import java.time.LocalDateTime;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,14 +46,14 @@ public class ZrpcClient {
 
     private AtomicBoolean stop = new AtomicBoolean(false);
 
-    public ZrpcClient(ClientPool clientPool, ServerInfo serverInfo, int timeout) throws InterruptedException {
+    public ZrpcClient(ClientPool clientPool, ServerInfo serverInfo, int timeout) throws Exception {
         this.clientPool = clientPool;
         this.serverInfo = serverInfo;
         this.timeout = timeout > 0 ? timeout : ClientProperties.DEFAULT_TIMEOUT;
         initChannel();
     }
 
-    private void initChannel() throws InterruptedException {
+    private void initChannel() throws Exception {
         codec = new NioEventLoopGroup(1);
         Bootstrap client = new Bootstrap();
         client.group(codec)
@@ -57,8 +62,8 @@ public class ZrpcClient {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
-                                .addLast("encoder", new ZZPEncoder())
-                                .addLast("decoder", new ZZPDecoder())
+                                .addLast("encoder", new ZrpcEncoder())
+                                .addLast("decoder", new ZrpcDecoder())
                                 .addLast("response", new ResponseHandler(ZrpcClient.this));
                     }
                 });
@@ -67,7 +72,7 @@ public class ZrpcClient {
     }
 
     public void close() {
-        log.info("close remainSize:{}", responseFutureMap.size());
+        log.info("close client remainSize:{}", responseFutureMap.size());
         if (responseFutureMap.isEmpty()) {
             doClose();
         } else {
@@ -79,7 +84,10 @@ public class ZrpcClient {
     private void doClose() {
         try {
             if (stop.compareAndSet(false, true)) {
-                channel.channel().close().sync();
+                if (channel != null) {
+                    channel.channel().close().sync();
+                }
+                //每个Future都fail?
                 responseFutureMap.clear();
                 log.info("client close success. {}:{}", serverInfo.getHost(), serverInfo.getPort());
             }
@@ -90,12 +98,12 @@ public class ZrpcClient {
         }
     }
 
-    public ResponseFuture request(ZZPMessage zzpMessage, Class<?> returnType) {
+    public ResponseFuture request(ZrpcEncodeObj zrpcEncodeObj, Type returnType) {
         int seq = this.seq.incrementAndGet();
-        zzpMessage.getHeader().setSeq(seq);
-        ResponseFutureImpl responseFuture = new ResponseFutureImpl<>(returnType);
+        zrpcEncodeObj.getHeader().setSeq(seq);
+        ResponseFutureImpl responseFuture = new ResponseFutureImpl(returnType);
         registryResponseFuture(seq, responseFuture);
-        channel.channel().writeAndFlush(zzpMessage);
+        channel.channel().writeAndFlush(zrpcEncodeObj);
         return responseFuture;
     }
 
@@ -122,20 +130,20 @@ public class ZrpcClient {
 
     public void ping() throws Exception {
         int seq = this.seq.incrementAndGet();
-        ZZPHeader zzpHeader = new ZZPHeader();
-        zzpHeader.setSeq(seq);
-        zzpHeader.setExt(ZZPHeader.PING);
-        ZZPMessage zzpMessage = new ZZPMessage();
-        zzpMessage.setHeader(zzpHeader);
-        ResponseFutureImpl responseFuture = new ResponseFutureImpl<>();
+        Header header = new Header();
+        header.setSeq(seq);
+        header.setExt(Header.PING);
+        ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+        encodeObj.setHeader(header);
+        ResponseFutureImpl responseFuture = new ResponseFutureImpl();
         registryResponseFuture(seq, responseFuture);
-        channel.channel().writeAndFlush(zzpMessage);
+        channel.channel().writeAndFlush(encodeObj);
         responseFuture.get();
     }
 
     public boolean isOpen() {
         //isActive底层会同步判断状态, 效率较低
-        return channel.channel().isOpen();
+        return channel != null && channel.channel().isOpen();
     }
 
     public void disablePool() {

@@ -13,6 +13,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author liweizhou 2020/4/13
@@ -64,16 +65,13 @@ public class RequestInvoker implements InvocationHandler {
         } catch (Throwable e) {
             if (e instanceof HystrixRuntimeException) {
                 HystrixRuntimeException hystrix = (HystrixRuntimeException) e;
-                Throwable fallbackException = hystrix.getFallbackException();
-                if (fallbackException instanceof FallbackException) {
-                    if (fallbackException == FallbackException.FALLBACK_NOT_FOUND) {
-                        throw hystrix.getCause();
-                    }
-                    throw fallbackException.getCause();
+                e = hystrix.getFallbackException().getCause();
+                if (e instanceof ExecutionException) {
+                    e = e.getCause();
                 }
-                throw hystrix.getCause();
             }
-            throw e;
+            //代理, new Exception可以让异常栈更好看
+            throw new RequestException(e);
         }
     }
 

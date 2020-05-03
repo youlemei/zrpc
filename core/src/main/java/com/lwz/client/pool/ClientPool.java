@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,6 +28,8 @@ public class ClientPool {
     private volatile boolean status = true;
 
     private SingleThreadEventExecutor renewExecutor = new DefaultEventExecutor();
+
+    public static final Duration RENEW_INTERVAL = Duration.ofSeconds(10);
 
     public ClientPool(ClientManager clientManager, ServerInfo serverInfo, ClientProperties clientProperties) {
         this.clientManager = clientManager;
@@ -47,14 +51,21 @@ public class ClientPool {
     }
 
     public ZrpcClient borrowObject() throws Exception {
-        return zrpcClientPool.borrowObject();
+        try {
+            return zrpcClientPool.borrowObject();
+        } catch (Exception e) {
+            if (e instanceof IOException) {
+                disable();
+            }
+            throw new RuntimeException("borrow object fail.", e);
+        }
     }
 
     public void invalidateObject(ZrpcClient zrpcClient) {
         try {
             zrpcClientPool.invalidateObject(zrpcClient);
         } catch (Exception e) {
-            log.warn("invalidateObject fail. err:{}", e.getMessage(), e);
+            log.info("invalidateObject fail. serverInfo:{} err:{}", serverInfo, e.getMessage());
         }
     }
 
@@ -65,9 +76,9 @@ public class ClientPool {
     public void close() {
         try {
             zrpcClientPool.close();
-            log.info("pool close success. {}:{}", serverInfo.getHost(), serverInfo.getPort());
+            log.info("ClientPool close success. {}:{}", serverInfo.getHost(), serverInfo.getPort());
         } catch (Exception e) {
-            log.warn("pool close fail. {}:{} err:{}", serverInfo.getHost(), serverInfo.getPort(), e.getMessage());
+            log.warn("ClientPool close fail. {}:{} err:{}", serverInfo.getHost(), serverInfo.getPort(), e.getMessage());
         } finally {
             renewExecutor.shutdownGracefully();
         }
@@ -98,7 +109,7 @@ public class ClientPool {
                 log.warn("renew fail. err:{}", e.getMessage());
             }
             addRenewTask();
-        }, 10, TimeUnit.SECONDS);
+        }, RENEW_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
 }

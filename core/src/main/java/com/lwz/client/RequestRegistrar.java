@@ -40,16 +40,22 @@ public class RequestRegistrar implements ImportBeanDefinitionRegistrar, BeanFact
                     GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
                     beanDefinition.setBeanClass(ClientFactoryBean.class);
                     beanDefinition.getPropertyValues().add("clientInterface", clientInterface);
-                    Object fallback = beanFactory.getBean(clientInterface);
-                    if (fallback instanceof ClientFallback) {
-                        beanDefinition.getPropertyValues().add("clientFallback", fallback);
-                    }
+                    beanDefinition.getPropertyValues().add("clientFallback", getFallback(clientInterface));
                     log.info("registry {}", clientInterface.getName());
                     registry.registerBeanDefinition(StringUtils.uncapitalize(clientInterface.getSimpleName()), beanDefinition);
                 } catch (ClassNotFoundException e) {
                     //ignore
                 }
             }
+        }
+    }
+
+    private Object getFallback(Class<?> clientInterface) {
+        try {
+            Object fallback = beanFactory.getBean(clientInterface);
+            return fallback instanceof ClientFallback ? fallback : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 

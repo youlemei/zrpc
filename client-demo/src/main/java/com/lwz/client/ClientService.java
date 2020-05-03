@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.concurrent.Future;
 
 /**
@@ -21,7 +22,17 @@ public class ClientService {
 
     @Scheduled(fixedDelay = 10000)
     public void run() throws Exception {
+        //runHello();
 
+        HelloRequest helloRequest = new HelloRequest();
+        helloRequest.setHost("lwz");
+        helloRequest.setPort(7777);
+
+        int ret = helloClient.hello2(helloRequest, Arrays.asList(1L, 2L, 3L), 2);
+        log.info("ret:{}", ret);
+    }
+
+    private void runHello() throws Exception {
         HelloRequest helloRequest = new HelloRequest();
         helloRequest.setHost("lwz");
         helloRequest.setPort(7320);

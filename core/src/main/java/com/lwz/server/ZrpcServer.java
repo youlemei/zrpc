@@ -1,7 +1,7 @@
 package com.lwz.server;
 
-import com.lwz.codec.ZZPDecoder;
-import com.lwz.codec.ZZPEncoder;
+import com.lwz.codec.ZrpcDecoder;
+import com.lwz.codec.ZrpcEncoder;
 import com.lwz.registry.DirectRegistrar;
 import com.lwz.registry.Registrar;
 import com.lwz.registry.ServerInfo;
@@ -47,14 +47,11 @@ public class ZrpcServer implements ApplicationRunner {
 
     private Registrar registrar;
 
-    private String uuid;
-
     private AtomicBoolean stop = new AtomicBoolean(false);
 
     public ZrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler) {
         this.serverProperties = serverProperties;
         this.dispatcherHandler = dispatcherHandler;
-        this.uuid = UUID.randomUUID().toString();
     }
 
     @PostConstruct
@@ -71,8 +68,8 @@ public class ZrpcServer implements ApplicationRunner {
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline()
                                     //TODO: 一些常用handler
-                                    .addLast("decoder", new ZZPDecoder())
-                                    .addLast("encoder", new ZZPEncoder())
+                                    .addLast("decoder", new ZrpcDecoder())
+                                    .addLast("encoder", new ZrpcEncoder())
                                     .addLast(handlerGroup, "dispatcher", dispatcherHandler);
                         }
                     });
@@ -92,7 +89,9 @@ public class ZrpcServer implements ApplicationRunner {
             if (stop.compareAndSet(false, true)) {
                 registrar.signOut();
                 // 优雅停机
-                channel.channel().close().sync();
+                if (channel != null) {
+                    channel.channel().close().sync();
+                }
                 log.info("server {} close success", serverProperties.getPort());
             }
         } catch (Exception e) {
@@ -121,7 +120,7 @@ public class ZrpcServer implements ApplicationRunner {
 
         //注册
         ServerInfo serverInfo = new ServerInfo(IPUtils.getIp(), serverProperties.getPort());
-        registrar.signIn(serverInfo, uuid);
+        registrar.signIn(serverInfo);
     }
 
 }

@@ -1,14 +1,14 @@
 package com.lwz.server;
 
-import com.lwz.annotation.Message;
-import com.lwz.codec.Messager;
+import com.lwz.codec.Codecs;
 import com.lwz.filter.Filter;
-import com.lwz.message.ZZPHeader;
-import com.lwz.message.ZZPMessage;
+import com.lwz.message.ZrpcDecodeObj;
+import com.lwz.message.ZrpcEncodeObj;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 
@@ -23,15 +23,36 @@ public class HandlerInvoker {
 
     private Method method;
 
+    private Type[] paramTypes;
+
+    private Type[] returnTypes;
+
     private List<Filter> filters = Collections.emptyList();
 
     public HandlerInvoker(int uri, Object bean, Method method) {
         this.uri = uri;
         this.bean = bean;
         this.method = method;
+        init();
     }
 
-    public boolean applyPreHandle(ChannelHandlerContext ctx, ZZPMessage msg) {
+    private void init() {
+        paramTypes = method.getGenericParameterTypes();
+        returnTypes = new Type[]{method.getGenericReturnType()};
+        //check
+        try {
+            for (Type type : paramTypes) {
+                Codecs.length(type, null);
+            }
+            for (Type type : returnTypes) {
+                Codecs.length(type, null);
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("func check fail.", e);
+        }
+    }
+
+    public boolean applyPreHandle(ChannelHandlerContext ctx, ZrpcDecodeObj msg) {
         for (Filter filter : filters) {
             if (!filter.preHandle(ctx, msg)) {
                 return false;
@@ -40,39 +61,33 @@ public class HandlerInvoker {
         return true;
     }
 
-    public void applyPostHandle(ChannelHandlerContext ctx, ZZPMessage msg) {
+    public void applyPostHandle(ChannelHandlerContext ctx, ZrpcDecodeObj msg) {
         for (Filter filter : filters) {
             filter.postHandle(ctx, msg);
         }
     }
 
-    public void handle(ChannelHandlerContext ctx, ZZPMessage msg) throws Exception {
+    public void handle(ChannelHandlerContext ctx, ZrpcDecodeObj msg) throws Exception {
         //拼参, 调用, 返回
-        //TODO: 接口化 decode encode handle
         Object[] args = getMethodArgs(msg);
         Object result = method.invoke(bean, args);
-        ZZPMessage message = new ZZPMessage();
-        message.setHeader(msg.getHeader());
-        message.setBody(result);
-        ctx.channel().writeAndFlush(message);
+        ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+        encodeObj.setHeader(msg.getHeader());
+        encodeObj.setBodys(new Object[]{result});
+        encodeObj.setBodyTypes(returnTypes);
+        ctx.channel().writeAndFlush(encodeObj);
     }
 
-    private Object[] getMethodArgs(ZZPMessage msg) {
-        ByteBuf bodyBuf = (ByteBuf) msg.getBody();
-        Class<?>[] parameterTypes = method.getParameterTypes();
-        Object[] args = new Object[parameterTypes.length];
-        for (int i = 0; i < parameterTypes.length; i++) {
-            Class<?> parameterType = parameterTypes[i];
-            if (parameterType.equals(ZZPHeader.class)) {
-                args[i] = msg.getHeader();
-                continue;
-            }
-            if (parameterType.getAnnotation(Message.class) != null) {
-                Object arg = Messager.read(bodyBuf, parameterType);
-                args[i] = arg;
-                break;
-            }
+    private Object[] getMethodArgs(ZrpcDecodeObj msg) throws Exception {
+        ByteBuf bodyBuf = msg.getBody();
+        Object[] args = new Object[paramTypes.length];
+        for (int i = 0; i < paramTypes.length; i++) {
+            Object arg = Codecs.read(bodyBuf, paramTypes[i]);
+            args[i] = arg;
         }
+        //if (bodyBuf.readableBytes() != 0) {
+        //    throw new DecoderException("byteBuf size is bigger");
+        //}
         return args;
     }
 

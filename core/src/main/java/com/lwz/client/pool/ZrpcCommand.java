@@ -2,18 +2,18 @@ package com.lwz.client.pool;
 
 import com.lwz.client.ClientFallback;
 import com.lwz.client.FallbackContext;
-import com.lwz.client.FallbackException;
 import com.lwz.client.MethodMetadata;
 import com.lwz.client.ResponseFuture;
 import com.lwz.client.ZrpcClient;
-import com.lwz.message.ZZPHeader;
-import com.lwz.message.ZZPMessage;
+import com.lwz.message.Header;
+import com.lwz.message.ZrpcEncodeObj;
 import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixEventType;
 import com.netflix.hystrix.HystrixThreadPoolKey;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.TimeoutException;
@@ -21,6 +21,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * @author liweizhou 2020/4/29
  */
+@Slf4j
 public class ZrpcCommand extends HystrixCommand {
 
     private MethodMetadata methodMetadata;
@@ -49,15 +50,14 @@ public class ZrpcCommand extends HystrixCommand {
         ZrpcClient zrpcClient = null;
         ResponseFuture responseFuture;
         try {
-            ZZPMessage message = new ZZPMessage();
-            ZZPHeader header = new ZZPHeader();
+            ZrpcEncodeObj encodeObj = new ZrpcEncodeObj();
+            Header header = new Header();
             header.setUri(methodMetadata.getRequest().value());
-            message.setHeader(header);
-            if (methodMetadata.getArgsIndex() >= 0) {
-                message.setBody(args[methodMetadata.getArgsIndex()]);
-            }
+            encodeObj.setHeader(header);
+            encodeObj.setBodys(args);
+            encodeObj.setBodyTypes(methodMetadata.getArgsTypes());
             zrpcClient = clientManager.borrowObject();
-            responseFuture = zrpcClient.request(message, methodMetadata.getReturnType());
+            responseFuture = zrpcClient.request(encodeObj, methodMetadata.getReturnType());
             //异常处理
         } finally {
             clientManager.returnObject(zrpcClient);
@@ -79,21 +79,22 @@ public class ZrpcCommand extends HystrixCommand {
 
     @Override
     protected Object getFallback() {
+        //未实现, 抛run异常 实现了, 抛fallback异常
         try {
-            //未实现, 抛run异常 实现了, 抛fallback异常
-            if (clientFallback == null) {
-                throw FallbackException.FALLBACK_NOT_FOUND;
-            }
             Throwable executionException = getExecutionException();
+            if (clientFallback == null) {
+                throw executionException;
+            }
             FallbackContext fallbackContext = new FallbackContext();
             fallbackContext.setCause(executionException);
             ClientFallback.FALLBACK_THREAD_LOCAL.set(fallbackContext);
+            log.info("invoke fallback {}", methodMetadata.getMethodKey());
             return methodMetadata.getMethod().invoke(clientFallback, args);
         } catch (Throwable e) {
             if (e instanceof InvocationTargetException) {
                 e = ((InvocationTargetException) e).getTargetException();
             }
-            throw new FallbackException(e);
+            throw new RuntimeException(e);
         } finally {
             ClientFallback.FALLBACK_THREAD_LOCAL.remove();
         }
