@@ -3,7 +3,8 @@ package com.lwz.client.client;
 import com.lwz.client.ResponseFuture;
 import com.lwz.client.message.HelloRequest;
 import com.lwz.client.message.HelloResponse;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -15,9 +16,10 @@ import java.util.concurrent.Executors;
 /**
  * @author liweizhou 2020/4/28
  */
-@Slf4j
 @Component
 public class HelloClientTest {
+
+    private static final Logger log = LoggerFactory.getLogger(HelloClientTest.class);
 
     public static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(10);
 

@@ -1,22 +1,24 @@
 package com.lwz.client;
 
 import com.lwz.codec.ZrpcCodecs;
+import com.lwz.message.DecodeObj;
 import com.lwz.message.ErrMessage;
 import com.lwz.message.Header;
-import com.lwz.message.DecodeObj;
 import com.lwz.server.HandlerException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.ReferenceCountUtil;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 /**
  * @author liweizhou 2020/4/12
  */
-@Slf4j
 public class ResponseHandler extends SimpleChannelInboundHandler<DecodeObj> {
+
+    private static final Logger log = LoggerFactory.getLogger(ResponseHandler.class);
 
     private ZrpcClient zrpcClient;
 

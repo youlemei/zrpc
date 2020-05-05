@@ -1,13 +1,12 @@
 package com.lwz.server.message;
 
+import com.alibaba.fastjson.JSON;
 import com.lwz.annotation.Field;
 import com.lwz.annotation.Message;
-import lombok.Data;
 
 /**
  * @author liweizhou 2020/4/12
  */
-@Data
 @Message
 public class HelloRequest {
 
@@ -17,4 +16,24 @@ public class HelloRequest {
     @Field(2)
     private int port;
 
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    @Override
+    public String toString() {
+        return JSON.toJSONString(this);
+    }
 }

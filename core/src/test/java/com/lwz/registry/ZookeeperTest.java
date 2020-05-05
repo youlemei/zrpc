@@ -23,7 +23,7 @@ public class ZookeeperTest {
             System.out.println("mode2");
         }, AddWatchMode.PERSISTENT_RECURSIVE);
 
-        Thread.sleep(888888888);
+        //Thread.sleep(888888888);
     }
 
     @Test
@@ -44,7 +44,7 @@ public class ZookeeperTest {
                     System.out.println("rc2");
                 }, this);
 
-        Thread.sleep(888888888);
+        //Thread.sleep(888888888);
     }
 
 }

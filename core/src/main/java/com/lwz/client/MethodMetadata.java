@@ -2,7 +2,6 @@ package com.lwz.client;
 
 import com.lwz.annotation.Request;
 import com.lwz.codec.ZrpcCodecs;
-import lombok.Data;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
 /**
  * @author liweizhou 2020/4/25
  */
-@Data
 public class MethodMetadata {
 
     private Request request;
@@ -65,5 +63,29 @@ public class MethodMetadata {
 
     public Type[] getArgsTypes() {
         return argsTypes;
+    }
+
+    public Request getRequest() {
+        return request;
+    }
+
+    public Method getMethod() {
+        return method;
+    }
+
+    public boolean isAsync() {
+        return async;
+    }
+
+    public String getServerKey() {
+        return serverKey;
+    }
+
+    public String getMethodKey() {
+        return methodKey;
+    }
+
+    public Type getReturnType() {
+        return returnType;
     }
 }

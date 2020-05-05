@@ -2,7 +2,8 @@ package com.lwz.server;
 
 import com.lwz.annotation.Handler;
 import com.lwz.annotation.Server;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -16,8 +17,9 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * @author liweizhou 2020/4/5
  */
-@Slf4j
 public class HandlerRegistrar implements BeanPostProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(HandlerRegistrar.class);
 
     private final ConcurrentMap<Integer, HandlerInvoker> handlerMap = new ConcurrentHashMap<>();
 

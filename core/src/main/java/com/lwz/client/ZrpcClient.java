@@ -3,8 +3,8 @@ package com.lwz.client;
 import com.lwz.client.pool.ClientPool;
 import com.lwz.codec.ZrpcDecoder;
 import com.lwz.codec.ZrpcEncoder;
-import com.lwz.message.Header;
 import com.lwz.message.EncodeObj;
+import com.lwz.message.Header;
 import com.lwz.registry.ServerInfo;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -12,7 +12,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.time.LocalDateTime;
@@ -27,8 +28,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author liweizhou 2020/4/12
  */
-@Slf4j
 public class ZrpcClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ZrpcClient.class);
 
     private ClientPool clientPool;
 

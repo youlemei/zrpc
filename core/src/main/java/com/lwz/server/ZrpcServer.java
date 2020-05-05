@@ -8,14 +8,14 @@ import com.lwz.util.IPUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.NettyRuntime;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -27,28 +27,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author liweizhou 2020/4/6
  */
-@Slf4j
 public class ZrpcServer implements ApplicationRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(ZrpcServer.class);
 
     private ServerProperties serverProperties;
 
-    private DispatcherHandler dispatcherHandler;
+    private HandlerRegistrar handlerRegistrar;
+
+    private Registrar registrar;
 
     private EventLoopGroup selectorGroup;
 
     private EventLoopGroup codecGroup;
 
-    private EventExecutorGroup handlerGroup;
+    private EventLoopGroup handlerGroup;
 
     private ChannelFuture channel;
 
-    private Registrar registrar;
-
     private AtomicBoolean stop = new AtomicBoolean(false);
 
-    public ZrpcServer(ServerProperties serverProperties, DispatcherHandler dispatcherHandler, Registrar registrar) {
+    public ZrpcServer(ServerProperties serverProperties, HandlerRegistrar handlerRegistrar, Registrar registrar) {
         this.serverProperties = serverProperties;
-        this.dispatcherHandler = dispatcherHandler;
+        this.handlerRegistrar = handlerRegistrar;
         this.registrar = registrar;
     }
 
@@ -57,7 +58,7 @@ public class ZrpcServer implements ApplicationRunner {
         try {
             selectorGroup = new NioEventLoopGroup(1);
             codecGroup = new NioEventLoopGroup();
-            handlerGroup = new DefaultEventExecutorGroup(NettyRuntime.availableProcessors() * 4);
+            handlerGroup = new DefaultEventLoopGroup(NettyRuntime.availableProcessors() * 4);
             ServerBootstrap server = new ServerBootstrap();
             server.group(selectorGroup, codecGroup)
                     .channel(NioServerSocketChannel.class)
@@ -65,10 +66,13 @@ public class ZrpcServer implements ApplicationRunner {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline()
-                                    //TODO: 一些常用handler
+                                    //.addLast("log", new LoggingHandler(LogLevel.DEBUG))
+                                    //.addLast("idleState", new IdleStateHandler(0, 0, serverProperties.getTimeout(), TimeUnit.SECONDS))
+                                    //.addLast("IdleChannelCloseHandler", new IdleChannelCloseHandler()); //handle IdleStateEvent
+                                    //.addLast("ipFilter", new IPFilterHandler())
                                     .addLast("decoder", new ZrpcDecoder())
                                     .addLast("encoder", new ZrpcEncoder())
-                                    .addLast(handlerGroup, "dispatcher", dispatcherHandler);
+                                    .addLast("dispatcher", new DispatcherHandler(handlerRegistrar, handlerGroup));
                         }
                     });
 

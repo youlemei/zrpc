@@ -1,6 +1,7 @@
 package com.lwz.util;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
 import java.net.InetAddress;
@@ -13,8 +14,9 @@ import java.util.List;
 /**
  * @author liweizhou 2020/2/17
  */
-@Slf4j
 public class IPUtils {
+
+    private static final Logger log = LoggerFactory.getLogger(IPUtils.class);
 
     private static String ip;
 
@@ -31,7 +33,11 @@ public class IPUtils {
     }
 
     private static void getLocalIp() {
-        List<String> ipList = getHostAddress();
+        List<String> ipList = new ArrayList<>();
+        try {
+            getIpList(NetworkInterface.getNetworkInterfaces(), ipList);
+        } catch (SocketException e) {
+        }
         log.info("this machine all ip are: {}", ipList);
         if (!CollectionUtils.isEmpty(ipList)) {
             for (String tip : ipList) {
@@ -46,37 +52,26 @@ public class IPUtils {
         }
     }
 
-    private static List<String> getHostAddress() {
-        Enumeration<NetworkInterface> nis;
-        try {
-            nis = NetworkInterface.getNetworkInterfaces();
-        } catch (SocketException e) {
-            return null;
-        }
-        List<String> ipList = new ArrayList<>();
+    private static void getIpList(Enumeration<NetworkInterface> nis, List<String> ipList) {
         while (nis.hasMoreElements()) {
             NetworkInterface ni = nis.nextElement();
             if ("eth0".equalsIgnoreCase(ni.getName())) {
-                Enumeration<NetworkInterface> subNis = ni.getSubInterfaces();
-                while (subNis.hasMoreElements()) {
-                    getHostAddress(ipList, subNis.nextElement());
+                getIpList(ni.getSubInterfaces(), ipList);
+            }
+            Enumeration<InetAddress> ips = ni.getInetAddresses();
+            while (ips.hasMoreElements()) {
+                InetAddress inet = ips.nextElement();
+                String ip = inet.getHostAddress();
+                if (ip.indexOf(":") == -1) {
+                    // 不使用IPv6
+                    ipList.add(ip);
                 }
             }
-            getHostAddress(ipList, ni);
         }
-        return ipList;
     }
 
-    private static void getHostAddress(List<String> ipList, NetworkInterface ni) {
-        Enumeration<InetAddress> ips = ni.getInetAddresses();
-        while (ips.hasMoreElements()) {
-            InetAddress inet = ips.nextElement();
-            String ip = inet.getHostAddress();
-            if (ip.indexOf(":") == -1) {
-                // 不使用IPv6
-                ipList.add(ip);
-            }
-        }
+    public static void main(String[] args) throws Exception {
+        System.out.println(getIp());
     }
 
 }

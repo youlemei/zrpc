@@ -3,12 +3,13 @@ package com.lwz.registry;
 import com.alibaba.fastjson.JSON;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -26,8 +27,9 @@ import java.util.function.Consumer;
 /**
  * @author liweizhou 2020/4/17
  */
-@Slf4j
 public class ZooKeeperRegistrar implements Registrar {
+
+    private static final Logger log = LoggerFactory.getLogger(ZooKeeperRegistrar.class);
 
     private RegistryProperties registryProperties;
 
@@ -53,7 +55,6 @@ public class ZooKeeperRegistrar implements Registrar {
     //默认配置
     int zookeeperSessionTimeout = 10000;
     Duration initZookeeperTimeout = Duration.ofSeconds(5);
-    Duration addZookeeperWatchTimeout = Duration.ofSeconds(5);
 
     private void initZookeeper(Runnable task) {
         try {
@@ -133,9 +134,9 @@ public class ZooKeeperRegistrar implements Registrar {
                 }, this);
             });
             try {
-                countDownLatch.await();
-            } catch (InterruptedException e) {
-                //ignore
+                Assert.isTrue(countDownLatch.await(10, TimeUnit.SECONDS));
+            } catch (Exception e) {
+                update.set(false);
             }
         }
         if (update.get()) {

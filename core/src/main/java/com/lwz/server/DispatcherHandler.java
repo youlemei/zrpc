@@ -6,27 +6,32 @@ import com.lwz.message.ErrMessage;
 import com.lwz.message.Header;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import io.netty.util.ReferenceCountUtil;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.concurrent.ForkJoinPool;
 
 /**
  * @author liweizhou 2020/4/5
  */
-@Slf4j
 @ChannelHandler.Sharable
 public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
 
+    private static final Logger log = LoggerFactory.getLogger(DispatcherHandler.class);
+
     private HandlerRegistrar handlerRegistrar;
 
-    public DispatcherHandler(HandlerRegistrar handlerRegistrar) {
+    private EventLoopGroup eventLoopGroup;
+
+    public DispatcherHandler(HandlerRegistrar handlerRegistrar, EventLoopGroup eventLoopGroup) {
         this.handlerRegistrar = handlerRegistrar;
+        this.eventLoopGroup = eventLoopGroup;
     }
 
     @Override
@@ -34,7 +39,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
 
         //TODO: 调用链 请求信息(ip/port/header) ThreadLocal
 
-        ForkJoinPool.commonPool().execute(()->{
+        eventLoopGroup.execute(() -> {
             try {
                 HandlerInvoker handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
                 if (handler == null) {
@@ -45,7 +50,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
                     return;
                 }
 
-                //TODO: async ???
+                //TODO: async handler级线程池
                 handler.handle(ctx, msg);
 
                 handler.applyPostHandle(ctx, msg);
@@ -61,7 +66,6 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
                 ReferenceCountUtil.release(msg.getBody());
             }
         });
-
 
     }
 

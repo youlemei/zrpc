@@ -1,20 +1,22 @@
 package com.lwz.codec;
 
-import com.lwz.message.Header;
 import com.lwz.message.DecodeObj;
 import com.lwz.message.EncodeObj;
+import com.lwz.message.Header;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 /**
  * @author liweizhou 2020/4/5
  */
-@Slf4j
 public class ZrpcDecoder extends ByteToMessageDecoder {
+
+    private static final Logger log = LoggerFactory.getLogger(ZrpcDecoder.class);
 
     public static final int MAX_BYTEBUF_LENGTH = 30 * 1024 * 1024;
 

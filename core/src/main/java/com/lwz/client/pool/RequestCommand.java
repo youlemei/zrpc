@@ -3,15 +3,16 @@ package com.lwz.client.pool;
 import com.lwz.client.MethodMetadata;
 import com.lwz.client.ResponseFuture;
 import com.lwz.client.ZrpcClient;
-import com.lwz.message.Header;
 import com.lwz.message.EncodeObj;
+import com.lwz.message.Header;
 import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixEventType;
 import com.netflix.hystrix.HystrixThreadPoolKey;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.TimeoutException;
@@ -19,8 +20,9 @@ import java.util.concurrent.TimeoutException;
 /**
  * @author liweizhou 2020/4/29
  */
-@Slf4j
-public class ZrpcCommand extends HystrixCommand {
+public class RequestCommand extends HystrixCommand {
+
+    private static final Logger log = LoggerFactory.getLogger(RequestCommand.class);
 
     private MethodMetadata methodMetadata;
 
@@ -30,7 +32,7 @@ public class ZrpcCommand extends HystrixCommand {
 
     private Object[] args;
 
-    public ZrpcCommand(MethodMetadata methodMetadata, ClientManager clientManager, Object clientFallback, Object[] args) {
+    public RequestCommand(MethodMetadata methodMetadata, ClientManager clientManager, Object clientFallback, Object[] args) {
         super(Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey(methodMetadata.getServerKey()))
                 .andCommandKey(HystrixCommandKey.Factory.asKey(methodMetadata.getMethodKey()))
                 .andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(methodMetadata.getMethodKey()))

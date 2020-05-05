@@ -1,12 +1,10 @@
 package com.lwz.server;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * @author liweizhou 2020/4/5
  */
-@Data
 @ConfigurationProperties("zrpc.server")
 public class ServerProperties {
 
@@ -30,4 +28,35 @@ public class ServerProperties {
      */
     private String serverKey;
 
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(int timeout) {
+        this.timeout = timeout;
+    }
+
+    public String getServerName() {
+        return serverName;
+    }
+
+    public void setServerName(String serverName) {
+        this.serverName = serverName;
+    }
+
+    public String getServerKey() {
+        return serverKey;
+    }
+
+    public void setServerKey(String serverKey) {
+        this.serverKey = serverKey;
+    }
 }

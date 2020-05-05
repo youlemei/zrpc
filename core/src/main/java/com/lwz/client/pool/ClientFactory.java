@@ -2,17 +2,19 @@ package com.lwz.client.pool;
 
 import com.lwz.client.ZrpcClient;
 import com.lwz.registry.ServerInfo;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 /**
  * @author liweizhou 2020/4/17
  */
-@Slf4j
 public class ClientFactory implements PooledObjectFactory<ZrpcClient> {
+
+    private static final Logger log = LoggerFactory.getLogger(ClientFactory.class);
 
     private ClientPool clientPool;
 

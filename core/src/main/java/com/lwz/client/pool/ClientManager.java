@@ -5,7 +5,8 @@ import com.lwz.client.ClientConfig;
 import com.lwz.client.ZrpcClient;
 import com.lwz.registry.Registrar;
 import com.lwz.registry.ServerInfo;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -23,8 +24,9 @@ import java.util.stream.Collectors;
  *
  * @author liweizhou 2020/4/27
  */
-@Slf4j
 public class ClientManager {
+
+    private static final Logger log = LoggerFactory.getLogger(ClientManager.class);
 
     private ClientConfig clientConfig;
 
@@ -42,10 +44,10 @@ public class ClientManager {
         this.clientConfig = clientConfig;
         this.registrar = registrar;
         this.clientInterface = clientInterface;
-        initRegistrar();
+        addListener();
     }
 
-    private void initRegistrar() {
+    private void addListener() {
         registrarInit = new CountDownLatch(1);
         Client client = clientInterface.getAnnotation(Client.class);
         registrar.addListener(client.value(), serverInfos -> {
@@ -56,7 +58,7 @@ public class ClientManager {
             List<ClientPool> oldClientPools = this.clientPoolList;
             List<ClientPool> newClientPools = serverInfos.stream()
                     .map(serverInfo -> Optional.ofNullable(findByServerInfo(oldClientPools, serverInfo))
-                            .orElse(new ClientPool(this, serverInfo, clientConfig)))
+                            .orElse(new ClientPool(serverInfo, clientConfig)))
                     .collect(Collectors.toList());
             this.clientPoolList = newClientPools;
             registrarInit.countDown();
@@ -82,7 +84,7 @@ public class ClientManager {
         //服务器升级-暂时不可用, 应采取nginx的暂时摘除策略, Socket异常销毁链接, 暂时摘除, n秒后重试
         List<ClientPool> clientPools = clientPoolList.stream().filter(ClientPool::isAvailable).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(clientPools)) {
-            throw new NoSuchElementException(String.format("no available server: %s", clientInterface.getName()));
+            throw new NoSuchElementException(String.format("No Available Server: %s", clientInterface.getName()));
         }
         return clientPools;
     }

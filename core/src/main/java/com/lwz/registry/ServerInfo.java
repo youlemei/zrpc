@@ -1,11 +1,8 @@
 package com.lwz.registry;
 
-import lombok.Data;
-
 /**
  * @author liweizhou 2020/4/17
  */
-@Data
 public class ServerInfo {
 
     private String host;
@@ -17,4 +14,19 @@ public class ServerInfo {
         this.port = port;
     }
 
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
 }

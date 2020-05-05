@@ -3,7 +3,8 @@ package com.lwz.client;
 import com.lwz.annotation.Client;
 import com.lwz.annotation.ClientScan;
 import com.lwz.client.pool.ClientFallback;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -24,8 +25,9 @@ import java.util.Set;
 /**
  * @author liweizhou 2020/4/12
  */
-@Slf4j
 public class RequestRegistrar implements ImportBeanDefinitionRegistrar, BeanFactoryAware {
+
+    private static final Logger log = LoggerFactory.getLogger(RequestRegistrar.class);
 
     private BeanFactory beanFactory;
 

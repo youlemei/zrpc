@@ -3,12 +3,10 @@ package com.lwz.message;
 import com.lwz.annotation.Field;
 import com.lwz.annotation.Message;
 import com.lwz.codec.ZrpcCodecs;
-import lombok.Data;
 
 /**
  * @author liweizhou 2020/3/29
  */
-@Data
 @Message
 public class Header {
 
@@ -69,4 +67,43 @@ public class Header {
         return (ext & Header.JSON) > 0;
     }
 
+    public int getUri() {
+        return uri;
+    }
+
+    public void setUri(int uri) {
+        this.uri = uri;
+    }
+
+    public int getSeq() {
+        return seq;
+    }
+
+    public void setSeq(int seq) {
+        this.seq = seq;
+    }
+
+    public int getLength() {
+        return length;
+    }
+
+    public void setLength(int length) {
+        this.length = length;
+    }
+
+    public short getVersion() {
+        return version;
+    }
+
+    public void setVersion(short version) {
+        this.version = version;
+    }
+
+    public short getExt() {
+        return ext;
+    }
+
+    public void setExt(short ext) {
+        this.ext = ext;
+    }
 }

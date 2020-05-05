@@ -2,7 +2,6 @@ package com.lwz.codec;
 
 import com.lwz.annotation.Field;
 import com.lwz.annotation.Message;
-import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,6 @@ import java.util.Map;
 /**
  * @author liweizhou 2020/5/2
  */
-@Data
 @Message
 public class TestStruct<T, R> {
 
@@ -40,4 +38,43 @@ public class TestStruct<T, R> {
     @Field(5)
     TestMessage<T, String, R> testMessage;
 
+    public R getR() {
+        return r;
+    }
+
+    public void setR(R r) {
+        this.r = r;
+    }
+
+    public T getT() {
+        return t;
+    }
+
+    public void setT(T t) {
+        this.t = t;
+    }
+
+    public List<R> getList() {
+        return list;
+    }
+
+    public void setList(List<R> list) {
+        this.list = list;
+    }
+
+    public Map<T, R> getMap() {
+        return map;
+    }
+
+    public void setMap(Map<T, R> map) {
+        this.map = map;
+    }
+
+    public TestMessage<T, String, R> getTestMessage() {
+        return testMessage;
+    }
+
+    public void setTestMessage(TestMessage<T, String, R> testMessage) {
+        this.testMessage = testMessage;
+    }
 }

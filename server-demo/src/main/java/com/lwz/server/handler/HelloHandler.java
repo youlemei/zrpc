@@ -4,7 +4,8 @@ import com.lwz.annotation.Handler;
 import com.lwz.annotation.Server;
 import com.lwz.server.message.HelloRequest;
 import com.lwz.server.message.HelloResponse;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -13,9 +14,10 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author liweizhou 2020/4/12
  */
-@Slf4j
 @Server
 public class HelloHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(HelloHandler.class);
 
     @Handler(1)
     public HelloResponse hello(HelloRequest helloRequest) throws Exception {

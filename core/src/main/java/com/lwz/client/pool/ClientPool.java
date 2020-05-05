@@ -5,9 +5,10 @@ import com.lwz.client.ZrpcClient;
 import com.lwz.registry.ServerInfo;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -16,10 +17,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author liweizhou 2020/4/17
  */
-@Slf4j
 public class ClientPool {
 
-    private ClientManager clientManager;
+    private static final Logger log = LoggerFactory.getLogger(ClientPool.class);
 
     private ServerInfo serverInfo;
 
@@ -31,8 +31,7 @@ public class ClientPool {
 
     public static final Duration RENEW_INTERVAL = Duration.ofSeconds(10);
 
-    public ClientPool(ClientManager clientManager, ServerInfo serverInfo, ClientConfig clientConfig) {
-        this.clientManager = clientManager;
+    public ClientPool(ServerInfo serverInfo, ClientConfig clientConfig) {
         this.serverInfo = serverInfo;
         ClientFactory clientFactory = new ClientFactory(this, serverInfo, clientConfig.getTimeout());
         PoolProperties pool = clientConfig.getPool();
@@ -57,7 +56,7 @@ public class ClientPool {
             if (e instanceof IOException) {
                 disable();
             }
-            throw new RuntimeException("borrow object fail.", e);
+            throw new RuntimeException("borrow ZrpcClient fail.", e);
         }
     }
 

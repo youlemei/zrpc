@@ -1,12 +1,10 @@
 package com.lwz.client;
 
 import com.lwz.client.pool.PoolProperties;
-import lombok.Data;
 
 /**
  * @author liweizhou 2020/5/3
  */
-@Data
 public class ClientConfig {
 
     public static final int DEFAULT_TIMEOUT = 10;
@@ -18,4 +16,19 @@ public class ClientConfig {
 
     private PoolProperties pool;
 
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(int timeout) {
+        this.timeout = timeout;
+    }
+
+    public PoolProperties getPool() {
+        return pool;
+    }
+
+    public void setPool(PoolProperties pool) {
+        this.pool = pool;
+    }
 }

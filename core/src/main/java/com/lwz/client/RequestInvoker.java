@@ -2,10 +2,10 @@ package com.lwz.client;
 
 import com.lwz.annotation.Request;
 import com.lwz.client.pool.ClientManager;
-import com.lwz.client.pool.ZrpcCommand;
+import com.lwz.client.pool.RequestCommand;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
@@ -18,9 +18,9 @@ import java.util.concurrent.ExecutionException;
 /**
  * @author liweizhou 2020/4/13
  */
-@Data
-@Slf4j
 public class RequestInvoker implements InvocationHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(RequestInvoker.class);
 
     private ClientManager clientManager;
 
@@ -60,8 +60,8 @@ public class RequestInvoker implements InvocationHandler {
         }
         try {
             //熔断降级应该是对服务整体而言的
-            ZrpcCommand zrpcCommand = new ZrpcCommand(methodMetadata, clientManager, clientFallback, args);
-            return zrpcCommand.execute();
+            RequestCommand requestCommand = new RequestCommand(methodMetadata, clientManager, clientFallback, args);
+            return requestCommand.execute();
         } catch (Throwable e) {
             if (e instanceof HystrixRuntimeException) {
                 HystrixRuntimeException hystrix = (HystrixRuntimeException) e;
