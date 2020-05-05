@@ -47,7 +47,7 @@ public interface HelloClient {
 #### 协议格式
 
 | 字段 | Uri | Seq | Length | Version | Ext | Body |
-| :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | 长度(byte) | 4 | 4 | 4 | 2 | 2 | Length |
 
 - Uri: 请求标识
@@ -92,7 +92,13 @@ Ext拓展了ping/pong心跳功能和body打包格式.
 
 ### 在ZRPC中, 服务接口的调用/处理是非阻塞的, 同一Socket连接可同时发起/处理多个请求/响应
 
-如图所示
+![image text](https://github.com/youlemei/zrpc/raw/master/images/zrpc-server.png)
+
+服务器收到请求, 根据请求头中的Uri查找Handler, 找到了就放到线程池处理, 线程池处理完了返回结果, 结合请求头中的Seq, 异步发送响应
+
+![image text](https://github.com/youlemei/zrpc/raw/master/images/zrpc-client.png)
+
+用户线程发起请求, 客户端生成Seq, 添加Seq与Future的映射关系后, 发送请求到服务器. 客户端收到响应后, 根据请求头中的Seq查找Future, 异步通知结果
 
 #### 序列化
 
