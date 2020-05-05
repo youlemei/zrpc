@@ -1,9 +1,9 @@
 package com.lwz.server;
 
-import com.lwz.message.ErrMessage;
-import com.lwz.message.Header;
 import com.lwz.message.DecodeObj;
 import com.lwz.message.EncodeObj;
+import com.lwz.message.ErrMessage;
+import com.lwz.message.Header;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * @author liweizhou 2020/4/5
@@ -33,31 +34,34 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
 
         //TODO: 调用链 请求信息(ip/port/header) ThreadLocal
 
-        try {
-            HandlerInvoker handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
-            if (handler == null) {
-                //err404
-                throw new HandlerException("404. Handler Not Found");
+        ForkJoinPool.commonPool().execute(()->{
+            try {
+                HandlerInvoker handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
+                if (handler == null) {
+                    //err404
+                    throw new HandlerException("404. Handler Not Found");
+                }
+                if (!handler.applyPreHandle(ctx, msg)) {
+                    return;
+                }
+
+                //TODO: async ???
+                handler.handle(ctx, msg);
+
+                handler.applyPostHandle(ctx, msg);
+
+            } catch (Throwable e) {
+                //responseErr();
+                log.warn("handle fail. header:{} err:{}", msg.getHeader(), e.getMessage(), e);
+                responseErr(ctx, msg, e);
+
+            } finally {
+
+                //ThreadLocal.remove
+                ReferenceCountUtil.release(msg.getBody());
             }
-            if (!handler.applyPreHandle(ctx, msg)) {
-                return;
-            }
+        });
 
-            //exception
-            handler.handle(ctx, msg);
-
-            handler.applyPostHandle(ctx, msg);
-
-        } catch (Throwable e) {
-            //responseErr();
-            log.warn("handle fail. header:{} err:{}", msg.getHeader(), e.getMessage(), e);
-            responseErr(ctx, msg, e);
-
-        } finally {
-
-            //ThreadLocal.remove
-            ReferenceCountUtil.release(msg.getBody());
-        }
 
     }
 

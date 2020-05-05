@@ -37,6 +37,8 @@ public class ResponseHandler extends SimpleChannelInboundHandler<DecodeObj> {
                     Object resp = ZrpcCodecs.read(msg.getBody(), responseFuture.getReturnType());
                     responseFuture.success(resp);
                 }
+            } else {
+                log.info("response discard header:{}", header);
             }
         } finally {
             ReferenceCountUtil.release(msg.getBody());

@@ -7,6 +7,8 @@ import com.lwz.server.message.HelloResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author liweizhou 2020/4/12
@@ -16,9 +18,11 @@ import java.util.List;
 public class HelloHandler {
 
     @Handler(1)
-    public HelloResponse hello(HelloRequest helloRequest) {
+    public HelloResponse hello(HelloRequest helloRequest) throws Exception {
 
         log.info("hello {}", helloRequest);
+
+        TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextLong(1000));
 
         HelloResponse helloResponse = new HelloResponse();
         helloResponse.setTime(System.currentTimeMillis());
