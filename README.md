@@ -88,13 +88,22 @@ public interface HelloClient {
 
 #### 序列化
 
+二进制 @Message @Field
+
 #### 服务发现
+
+Zookeeper
 
 #### 负载均衡
 
+Random
+
 #### 可靠连接
+
+连接池, ping/pong心跳, failover
 
 #### 熔断降级
 
+hystrix fallback
 
 
