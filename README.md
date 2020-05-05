@@ -12,14 +12,12 @@ public class HelloHandler {
 
     @Handler(1)
     public HelloResponse hello(HelloRequest helloRequest) {
-
         log.info("hello {}", helloRequest);
-
+        
         HelloResponse helloResponse = new HelloResponse();
         helloResponse.setTime(System.currentTimeMillis());
         return helloResponse;
     }
-
 }
     
 // Client - Declare an interface.
@@ -31,7 +29,6 @@ public interface HelloClient {
 
     @Request(1)
     Future<HelloResponse> helloAsync(HelloRequest helloRequest);
-
 }
 // Then. You can use HelloClient by @Autowired.
 ```
@@ -75,8 +72,29 @@ public interface HelloClient {
 
 我们再看看Thrift. Thrift的做法是定义一份IDL文件, 然后生成对应的Java文件. 服务端实现生成的服务接口提供服务, 客户端通过生成的Client调用服务. 这种模式的好处是可拓展多语言.
 
-最后再看看Spring Cloud. Spring Cloud的做法类似Dubbo, 定义一个接口文件, 服务端实现该接口提供服务, 客户端通过该接口的代理调用服务, 不同之处是基于Http协议.
+最后再看看Spring MVC, Spring MVC并不是RPC框架, 但里面的设计模式却值得参考. 首先, 使用注解@RequestMapping标记服务接口, 服务接口之间是0耦合的, 然后客户端调用接口时, 只需要调用自己关注的接口, 不用引入其他接口.
+
+因此, 最终的设想如下:
+
+- 使用注解@Handler标记方法, 注册服务接口
+- 使用Java接口定义需要调用服务接口
+
+这样设计的理由是: 1.服务接口之间耦合低,便于对接口分类; 2.客户端只需要定义自己关注的接口,然后注入接口代理对象即可调用; 3.可根据方法签名做一些定制处理,例如返回类型为Future时可注册异步处理.
+
+
+#### ZRPC是一个事件驱动的RPC框架. 在ZRPC中, 服务接口的调用/处理是非阻塞的, 同一Socket连接可同时发起/处理多个请求/响应
+
+如图所示
+
+#### 序列化
+
+#### 服务发现
+
+#### 负载均衡
+
+#### 可靠连接
+
+#### 熔断降级
 
 
 
-ZRPC也是一个事件驱动的RPC框架. 在ZRPC中, 事件处理是非阻塞的, 同一Socket连接可同时处理多个请求, 并支持异步响应, 
