@@ -7,15 +7,13 @@ import com.lwz.registry.Registrar;
 import com.lwz.registry.ServerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -67,18 +65,17 @@ public class ClientManager {
     }
 
     public ZrpcClient borrowObject() throws Exception {
-        List<ClientPool> clientPools = checkForBorrow();
+        List<ClientPool> clientPools = checkClientPools();
         //调用时间加入权重
         int index = ThreadLocalRandom.current().nextInt(clientPools.size());
         ClientPool clientPool = clientPools.get(index);
         return clientPool.borrowObject();
     }
 
-    private List<ClientPool> checkForBorrow() {
+    private List<ClientPool> checkClientPools() {
         try {
-            registrarInit.await();
-        } catch (InterruptedException e) {
-            //ignore
+            Assert.isTrue(registrarInit.await(10, TimeUnit.SECONDS));
+        } catch (Exception ignore) {
         }
         List<ClientPool> clientPoolList = this.clientPoolList;
         //服务器升级-暂时不可用, 应采取nginx的暂时摘除策略, Socket异常销毁链接, 暂时摘除, n秒后重试

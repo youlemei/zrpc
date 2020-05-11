@@ -7,21 +7,19 @@ import com.lwz.message.EncodeObj;
 import com.lwz.message.Header;
 import com.lwz.registry.ServerInfo;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.zookeeper.common.NettyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.time.LocalDateTime;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,7 +38,7 @@ public class ZrpcClient {
 
     private ChannelFuture channel;
 
-    private NioEventLoopGroup codec;
+    private EventLoopGroup codec;
 
     private AtomicInteger seq = new AtomicInteger(ThreadLocalRandom.current().nextInt(100000000));
 
@@ -56,14 +54,20 @@ public class ZrpcClient {
     }
 
     private void initChannel() throws Exception {
-        codec = new NioEventLoopGroup(1);
+        codec = NettyUtils.newNioOrEpollEventLoopGroup(1);
         Bootstrap client = new Bootstrap();
         client.group(codec)
-                .channel(NioSocketChannel.class)
+                .channel(NettyUtils.nioOrEpollSocketChannel())
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
+                                //.addLast("log", new LoggingHandler(LogLevel.DEBUG))
+                                //.addLast("ssl", new SSLHandler(engine))
                                 .addLast("encoder", new ZrpcEncoder())
                                 .addLast("decoder", new ZrpcDecoder())
                                 .addLast("response", new ResponseHandler(ZrpcClient.this));
@@ -100,9 +104,19 @@ public class ZrpcClient {
         }
     }
 
-    public ResponseFuture request(EncodeObj encodeObj, Type returnType) {
+    /**
+     * TODO: 调用链
+     */
+    public ResponseFuture request(int uri, Object[] args, Type[] argsTypes, Type returnType) {
         int seq = this.seq.incrementAndGet();
-        encodeObj.getHeader().setSeq(seq);
+        Header header = new Header();
+        header.setUri(uri);
+        header.setSeq(seq);
+        EncodeObj encodeObj = new EncodeObj();
+        encodeObj.setHeader(header);
+        encodeObj.setBodys(args);
+        encodeObj.setBodyTypes(argsTypes);
+
         ResponseFutureImpl responseFuture = new ResponseFutureImpl(returnType);
         registryResponseFuture(seq, responseFuture);
         channel.channel().writeAndFlush(encodeObj);
@@ -112,7 +126,7 @@ public class ZrpcClient {
     private ResponseFutureImpl registryResponseFuture(int seq, ResponseFutureImpl responseFuture) {
         //注册超时
         codec.schedule(() -> {
-            ResponseFutureImpl future = responseFutureMap.remove(seq);
+            ResponseFutureImpl future = getResponseFuture(seq);
             if (future != null) {
                 future.fail(new TimeoutException(String.format("request timeout. begin:%s now:%s", future.getCreate(), LocalDateTime.now())));
                 //n次后
@@ -137,6 +151,7 @@ public class ZrpcClient {
         header.setExt(Header.PING);
         EncodeObj encodeObj = new EncodeObj();
         encodeObj.setHeader(header);
+
         ResponseFutureImpl responseFuture = new ResponseFutureImpl();
         registryResponseFuture(seq, responseFuture);
         channel.channel().writeAndFlush(encodeObj);

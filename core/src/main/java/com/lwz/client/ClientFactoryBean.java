@@ -50,8 +50,8 @@ public class ClientFactoryBean implements FactoryBean, BeanFactoryAware {
 
     @PreDestroy
     public void destroy() {
-        log.info("destroy {}", clientInterface.getName());
         if (clientManager != null) {
+            log.info("destroy manager {}", clientInterface.getName());
             clientManager.destroy();
         }
     }

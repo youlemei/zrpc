@@ -37,7 +37,7 @@ public class ZooKeeperRegistrar implements Registrar {
 
     private ConcurrentMap<String, Consumer<List<ServerInfo>>> listenerMap = new ConcurrentHashMap<>();
 
-    private Runnable registerTask;
+    private ConcurrentMap<String, ServerInfo> registerMap = new ConcurrentHashMap<>();
 
     private SingleThreadEventExecutor zookeeperExecutor = new DefaultEventExecutor();
 
@@ -59,7 +59,7 @@ public class ZooKeeperRegistrar implements Registrar {
     private void initZookeeper(Runnable task) {
         try {
             zooKeeper = new ZooKeeper(registryProperties.getRegistryUrl(), zookeeperSessionTimeout, event -> {
-                log.debug("zookeeper event:{}", event);
+                log.info("zookeeper event:{}", event);
                 switch (event.getState()) {
                     case SyncConnected:
                         log.info("ZooKeeper SyncConnected. {}", registryProperties.getRegistryUrl());
@@ -74,11 +74,12 @@ public class ZooKeeperRegistrar implements Registrar {
                             } catch (InterruptedException e) {
                                 //ignore
                             }
+                            AtomicBoolean run = new AtomicBoolean();
                             initZookeeper(() -> {
-                                if (registerTask != null) {
-                                    registerTask.run();
+                                if (run.compareAndSet(false, true)) {
+                                    registerMap.forEach((path, serverInfo) -> createServerNode(path, 0, serverInfo));
+                                    listenerMap.keySet().forEach(serverName -> getServerChildren(zooKeeper, serverName));
                                 }
-                                listenerMap.keySet().forEach(serverName -> getServerChildren(zooKeeper, serverName));
                             });
                         });
                         break;
@@ -150,8 +151,9 @@ public class ZooKeeperRegistrar implements Registrar {
     @Override
     public void register(String serverName, ServerInfo serverInfo) {
         String path = registryProperties.getRootPath() + "/" + serverName + "/" + UUID.randomUUID();
-        registerTask = () -> createServerNode(path, 0, serverInfo);
-        registerTask.run();
+        if (registerMap.putIfAbsent(path, serverInfo) == null) {
+            createServerNode(path, 0, serverInfo);
+        }
     }
 
     private void createServerNode(String path, int offset, ServerInfo serverInfo) {

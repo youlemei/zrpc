@@ -71,7 +71,6 @@ public class HandlerInvoker {
         //拼参, 调用, 返回
         Object[] args = getMethodArgs(msg);
         Object result = method.invoke(bean, args);
-        //TODO: Future result
         EncodeObj encodeObj = new EncodeObj();
         encodeObj.setHeader(msg.getHeader());
         encodeObj.setBodys(new Object[]{result});

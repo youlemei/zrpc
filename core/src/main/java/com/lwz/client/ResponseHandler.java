@@ -7,7 +7,6 @@ import com.lwz.message.Header;
 import com.lwz.server.HandlerException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,22 +27,18 @@ public class ResponseHandler extends SimpleChannelInboundHandler<DecodeObj> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DecodeObj msg) throws Exception {
-        try {
-            Header header = msg.getHeader();
-            ResponseFutureImpl responseFuture = zrpcClient.getResponseFuture(header.getSeq());
-            if (responseFuture != null) {
-                if (header.isException()) {
-                    ErrMessage err = ZrpcCodecs.read(msg.getBody(), ErrMessage.class);
-                    responseFuture.fail(new HandlerException(err.getMessage()));
-                } else {
-                    Object resp = ZrpcCodecs.read(msg.getBody(), responseFuture.getReturnType());
-                    responseFuture.success(resp);
-                }
+        Header header = msg.getHeader();
+        ResponseFutureImpl responseFuture = zrpcClient.getResponseFuture(header.getSeq());
+        if (responseFuture != null) {
+            if (header.isException()) {
+                ErrMessage err = ZrpcCodecs.read(msg.getBody(), ErrMessage.class);
+                responseFuture.fail(new HandlerException(err.getMessage()));
             } else {
-                log.info("response discard header:{}", header);
+                Object resp = ZrpcCodecs.read(msg.getBody(), responseFuture.getReturnType());
+                responseFuture.success(resp);
             }
-        } finally {
-            ReferenceCountUtil.release(msg.getBody());
+        } else {
+            log.info("response discard header:{}", header);
         }
     }
 

@@ -36,7 +36,7 @@ public class Header {
 
     /**
      * 拓展: ping/pong/exception/json
-     * TODO: callType: call, oneWay, reply
+     * callType: call, oneWay, reply
      */
     @Field(5)
     private short ext;

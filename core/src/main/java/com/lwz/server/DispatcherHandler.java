@@ -10,12 +10,12 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
-import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.net.InetSocketAddress;
 
 /**
  * @author liweizhou 2020/4/5
@@ -37,10 +37,14 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DecodeObj msg) throws Exception {
 
-        //TODO: 调用链 请求信息(ip/port/header) ThreadLocal
-
         eventLoopGroup.execute(() -> {
             try {
+                InetSocketAddress socketAddress = (InetSocketAddress) ctx.channel().remoteAddress();
+                String ip = socketAddress.getAddress().getHostAddress();
+                int port = socketAddress.getPort();
+                HandlerContext.set("remoteIp", ip);
+                HandlerContext.set("remotePort", port);
+
                 HandlerInvoker handler = handlerRegistrar.findHandler(msg.getHeader().getUri());
                 if (handler == null) {
                     //err404
@@ -50,7 +54,6 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
                     return;
                 }
 
-                //TODO: async handler级线程池
                 handler.handle(ctx, msg);
 
                 handler.applyPostHandle(ctx, msg);
@@ -61,9 +64,7 @@ public class DispatcherHandler extends SimpleChannelInboundHandler<DecodeObj> {
                 responseErr(ctx, msg, e);
 
             } finally {
-
-                //ThreadLocal.remove
-                ReferenceCountUtil.release(msg.getBody());
+                HandlerContext.remove();
             }
         });
 

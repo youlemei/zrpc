@@ -2,6 +2,7 @@ package com.lwz.server.handler;
 
 import com.lwz.annotation.Handler;
 import com.lwz.annotation.Server;
+import com.lwz.server.HandlerContext;
 import com.lwz.server.message.HelloRequest;
 import com.lwz.server.message.HelloResponse;
 import org.slf4j.Logger;
@@ -22,7 +23,7 @@ public class HelloHandler {
     @Handler(1)
     public HelloResponse hello(HelloRequest helloRequest) throws Exception {
 
-        log.info("hello {}", helloRequest);
+        log.info("hello {}:{} {}", HandlerContext.get("remoteIp"), HandlerContext.get("remotePort"), helloRequest);
 
         TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextLong(1000));
 
