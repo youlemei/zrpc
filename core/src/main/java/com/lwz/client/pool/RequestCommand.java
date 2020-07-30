@@ -11,6 +11,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.TimeoutException;
 
 /**
+ * TODO: 换Sentinel
+ *
  * @author liweizhou 2020/4/29
  */
 public class RequestCommand extends HystrixCommand {

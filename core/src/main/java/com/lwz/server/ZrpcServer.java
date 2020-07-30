@@ -94,7 +94,7 @@ public class ZrpcServer implements ApplicationRunner, ApplicationListener<Contex
             if (stop.compareAndSet(false, true)) {
                 registrar.unRegister();
 
-                // 优雅停机
+                // TODO: 优雅停机
                 if (channel != null) {
                     channel.channel().close().sync();
                 }

@@ -1,7 +1,7 @@
 package com.lwz.server;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author liweizhou 2020/5/9
@@ -12,7 +12,7 @@ public class HandlerContext {
 
     static void set(String key, Object value) {
         if (THREAD_LOCAL.get() == null) {
-            THREAD_LOCAL.set(new ConcurrentHashMap<>());
+            THREAD_LOCAL.set(new HashMap<>());
         }
         THREAD_LOCAL.get().put(key, value);
     }
