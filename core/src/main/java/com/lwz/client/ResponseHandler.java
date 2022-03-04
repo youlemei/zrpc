@@ -44,9 +44,10 @@ public class ResponseHandler extends SimpleChannelInboundHandler<DecodeObj> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        // 异常处理
+        // 异常处理 可考虑SpringMVC全局异常处理
         log.error("client channel err:{} type:{}", cause.getMessage(), cause.getClass().getName(), cause);
         if (cause instanceof IOException) {
+            // SocketException SocketTimeoutException
             //关闭连接池, 或使连接池不可用
             zrpcClient.disablePool();
         }

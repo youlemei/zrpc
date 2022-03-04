@@ -65,6 +65,7 @@ public class ClientManager {
     }
 
     public ZrpcClient borrowObject() throws Exception {
+        //TODO: 路线选择, 同机房->同地区->所有
         List<ClientPool> clientPools = checkClientPools();
         //调用时间加入权重
         int index = ThreadLocalRandom.current().nextInt(clientPools.size());
